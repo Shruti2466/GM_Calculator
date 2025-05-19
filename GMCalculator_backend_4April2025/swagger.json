@@ -1,0 +1,507 @@
+{
+    "swagger": "2.0",
+    "info": {
+      "version": "1.0.1",
+      "title": "Gross Margin Calculator API",
+      "description": "Updated API documentation for the Gross Margin Calculator."
+    },
+    "host": "localhost:3001",
+    "basePath": "/api",
+    "schemes": ["http"],
+    "paths": {
+      "/auth/register": {
+      "post": {
+        "summary": "Register",
+        "description": "Register a new user.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "email": { "type": "string" },
+                "password": { "type": "string" },
+                "role": { "type": "string" }
+              },
+              "required": ["email", "password", "role"]
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "User registered successfully",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "token": { "type": "string" }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/auth/login": {
+      "post": {
+        "summary": "Login",
+        "description": "Authenticate user and return a JWT token.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "email": { "type": "string" },
+                "password": { "type": "string" }
+              },
+              "required": ["email", "password"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful login",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "token": { "type": "string" }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid credentials"
+          }
+        }
+      }
+    },
+      "/projects": {
+        "get": {
+          "summary": "Get Projects",
+          "description": "Retrieve a list of all projects.",
+          "responses": {
+            "200": {
+              "description": "List of projects",
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/definitions/Project"
+                }
+              }
+            }
+          }
+        },
+        "post": {
+          "summary": "Create Project",
+        "description": "Add a new project.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "delivery_unit": { "type": "string" },
+                "account_name": { "type": "string" },
+                "project_name": { "type": "string" },
+                "delivery_manager_id": { "type": "integer" },
+                "delivery_head_id": { "type": "integer" },
+                "start_date": { "type": "string", "example": "YYYY-MM-DD" },
+                "end_date": { "type": "string", "example": "YYYY-MM-DD" }
+              },
+              "required": ["delivery_unit", "account_name", "project_name", "start_date", "end_date"]
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Project created successfully",
+            "schema": {
+              "$ref": "#/definitions/Project"
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+        }
+      },
+      "/projects/{id}": {
+        "put": {
+          "summary": "Edit Project",
+          "description": "Edit an existing project.",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "type": "integer"
+            },
+            {
+              "in": "body",
+              "name": "body",
+              "required": true,
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "delivery_unit": { "type": "string" },
+                  "account_name": { "type": "string" },
+                  "project_name": { "type": "string" },
+                  "delivery_manager_id": { "type": "integer" },
+                  "delivery_head_id": { "type": "integer" },
+                  "start_date": { "type": "string", "example": "YYYY-MM-DD" },
+                  "end_date": { "type": "string", "example": "YYYY-MM-DD" }
+                },
+                "required": ["delivery_unit", "account_name", "project_name", "start_date", "end_date"]
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Project updated successfully"
+            },
+            "500": {
+              "description": "Internal server error"
+            }
+          }
+        },
+        "delete": {
+          "summary": "Delete Project",
+          "description": "Remove an existing project.",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "type": "integer"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Project deleted"
+            }
+          }
+        }
+      },
+      "/projects/{id}/chart-data": {
+        "get": {
+          "summary": "Get Project Chart Data",
+          "description": "Fetch aggregated project data for chart visualization.",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "type": "integer"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Chart data fetched successfully",
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": { "type": "string" },
+                    "total_direct_cost": { "type": "number" },
+                    "gross_margin": { "type": "number" },
+                    "gross_margin_percentage": { "type": "number" }
+                  }
+                }
+              }
+            },
+            "500": {
+              "description": "Internal server error"
+            }
+          }
+        }
+      },
+      "/projects/{id}/upload": {
+        "post": {
+          "summary": "Upload Project File",
+          "description": "Upload an Excel file for gross margin calculation.",
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "type": "integer"
+            },
+            {
+              "in": "formData",
+              "name": "file",
+              "required": true,
+              "type": "file"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "File processed successfully",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "totalDirectCost": { "type": "number" },
+                  "grossMargin": { "type": "number" },
+                  "percentageGrossMargin": { "type": "number" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/dashboard/organization-metrics": {
+      "get": {
+        "summary": "Get Organization Metrics",
+        "description": "Fetch Total Direct Costs, Gross Margin, and Average Gross Margin Percentage for the last 6 months.",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "deliveryUnit",
+            "required": false,
+            "type": "string",
+            "description": "Filter by delivery unit."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Organization metrics fetched successfully",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "totalDirectCost": { "type": "number" },
+                "totalGrossMargin": { "type": "number" },
+                "avgGrossMarginPercentage": { "type": "number" }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/dashboard/project-trends": {
+      "get": {
+        "summary": "Get Project Trends",
+        "description": "Fetch project-wise gross margin trends for the last 6 months.",
+        "responses": {
+          "200": {
+            "description": "Project trends fetched successfully",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "project_name": { "type": "string" },
+                  "month": { "type": "string" },
+                  "gross_margin": { "type": "number" }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/employee": {
+      "get": {
+        "summary": "Get All Employees",
+        "description": "Retrieve a list of all employees.",
+        "responses": {
+          "200": {
+            "description": "List of employees",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Employee"
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create Employee",
+        "description": "Add a new employee.",
+        "parameters": [
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "employee_id": { "type": "string" },
+                "employee_email": { "type": "string" },
+                "employee_name": { "type": "string" },
+                "role_id": { "type": "integer" }
+              },
+              "required": ["employee_id", "employee_email", "employee_name", "role_id"]
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Employee created successfully",
+            "schema": {
+              "$ref": "#/definitions/Employee"
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/employee/{id}": {
+      "get": {
+        "summary": "Get Employee by ID",
+        "description": "Retrieve an employee by ID.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Employee details",
+            "schema": {
+              "$ref": "#/definitions/Employee"
+            }
+          },
+          "404": {
+            "description": "Employee not found"
+          }
+        }
+      },
+      "put": {
+        "summary": "Update Employee",
+        "description": "Update an existing employee.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "in": "body",
+            "name": "body",
+            "required": true,
+            "schema": {
+              "type": "object",
+              "properties": {
+                "employee_id": { "type": "string" },
+                "employee_email": { "type": "string" },
+                "employee_name": { "type": "string" },
+                "role_id": { "type": "integer" }
+              },
+              "required": ["employee_id", "employee_email", "employee_name", "role_id"]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Employee updated successfully"
+          },
+          "404": {
+            "description": "Employee not found"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete Employee",
+        "description": "Remove an existing employee.",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Employee deleted"
+          },
+          "404": {
+            "description": "Employee not found"
+          }
+        }
+      }
+    },
+    "/dashboard/organization-metrics/all": {
+      "get": {
+        "summary": "Get All Organization Metrics",
+        "description": "Fetch all organization metrics without filtering by delivery unit.",
+        "responses": {
+          "200": {
+            "description": "All organization metrics fetched successfully",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "totalDirectCost": { "type": "number" },
+                "totalGrossMargin": { "type": "number" },
+                "avgGrossMarginPercentage": { "type": "number" }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "definitions": {
+      "Employee": {
+        "type": "object",
+        "properties": {
+          "employee_id": { "type": "string" },
+          "employee_email": { "type": "string" },
+          "employee_name": { "type": "string" },
+          "role_id": { "type": "integer" }
+        },
+        "required": ["employee_id", "employee_email", "employee_name", "role_id"]
+      },
+      "Project": {
+        "type": "object",
+        "properties": {
+          "delivery_unit": { "type": "string" },
+          "account_name": { "type": "string" },
+          "project_name": { "type": "string" },
+          "delivery_manager_id": { "type": "integer" },
+          "delivery_head_id": { "type": "integer" },
+          "start_date": { "type": "string", "format": "date" },
+          "end_date": { "type": "string", "format": "date" }
+        },
+        "required": ["delivery_unit", "account_name", "project_name", "start_date", "end_date"]
+      }
+    }
+    },
+    "definitions": {
+      "Project": {
+        "type": "object",
+        "properties": {
+          "delivery_unit": { "type": "string" },
+          "account_name": { "type": "string" },
+          "project_name": { "type": "string" },
+          "delivery_manager_id": { "type": "integer" },
+          "delivery_head_id": { "type": "integer" },
+          "start_date": { "type": "string", "format": "date" },
+          "end_date": { "type": "string", "format": "date" }
+        },
+        "required": ["delivery_unit", "account_name", "project_name", "start_date", "end_date"]
+      }
+    }
+  }

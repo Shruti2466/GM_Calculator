@@ -1,0 +1,327 @@
+{
+  "info": {
+    "name": "Gross Margin Calculator API",
+    "description": "Postman collection for the Gross Margin Calculator API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Get All Employees",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3001/api/employee",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "employee"]
+        }
+      }
+    },
+    {
+      "name": "Get Employee by ID",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3001/api/employee/:id",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "employee", ":id"]
+        }
+      }
+    },
+    {
+      "name": "Create Employee",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"employee_id\": \"\",\n  \"employee_email\": \"\",\n  \"employee_name\": \"\",\n  \"role_id\": 1\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3001/api/employee",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "employee"]
+        }
+      }
+    },
+    {
+      "name": "Update Employee",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"employee_id\": \"\",\n  \"employee_email\": \"\",\n  \"employee_name\": \"\",\n  \"role_id\": 1\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3001/api/employee/:id",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "employee", ":id"]
+        }
+      }
+    },
+    {
+      "name": "Delete Employee",
+      "request": {
+        "method": "DELETE",
+        "url": {
+          "raw": "http://localhost:3001/api/employee/:id",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "employee", ":id"]
+        }
+      }
+    },
+    {
+      "name": "Get DMs",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3001/api/employee/dms",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "employee", "dms"]
+        }
+      }
+    },
+    {
+      "name": "Get DHs",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3001/api/employee/dhs",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "employee", "dhs"]
+        }
+      }
+    },
+    {
+      "name": "Get Organization Metrics",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3001/api/dashboard/organization-metrics",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "dashboard", "organization-metrics"]
+        }
+      }
+    },
+    {
+      "name": "Get Project Trends",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3001/api/dashboard/project-trends",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "dashboard", "project-trends"]
+        }
+      }
+    },
+    {
+      "name": "Register",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"user\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3001/api/auth/register",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "auth", "register"]
+        }
+      }
+    },
+    {
+      "name": "Get Project Chart Data",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3001/api/projects/:id/chart-data",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "projects", ":id", "chart-data"]
+        }
+      }
+    },
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"\",\n  \"password\": \"\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3001/api/auth/login",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "auth", "login"]
+        }
+      }
+    },
+    {
+      "name": "Get Projects",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3001/api/projects",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "projects"]
+        }
+      }
+    },
+    {
+      "name": "Create Project",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"delivery_unit\": \"\",\n  \"account_name\": \"\",\n  \"project_name\": \"\",\n  \"start_date\": \"\",\n  \"end_date\": \"\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3001/api/projects",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "projects"]
+        }
+      }
+    },
+    {
+      "name": "Edit Project",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"delivery_unit\": \"\",\n  \"account_name\": \"\",\n  \"project_name\": \"\",\n  \"start_date\": \"\",\n  \"end_date\": \"\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:3001/api/projects/:id",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "projects", ":id"]
+        }
+      }
+    },
+    {
+      "name": "Delete Project",
+      "request": {
+        "method": "DELETE",
+        "url": {
+          "raw": "http://localhost:3001/api/projects/:id",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "projects", ":id"]
+        }
+      }
+    },
+    {
+      "name": "Upload Project File",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file1",
+              "type": "file",
+              "src": "",
+              "description": "Finance Excel file"
+            },
+            {
+              "key": "file2",
+              "type": "file",
+              "src": "",
+              "description": "RM Excel file"
+            },
+            {
+              "key": "file3",
+              "type": "file",
+              "src": "",
+              "description": "Salary Excel file"
+            }
+          ]
+        },
+        "url": {
+          "raw": "http://localhost:3001/api/projects/:id/upload",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "projects", ":id", "upload"]
+        }
+      }
+    },
+    {
+      "name": "Get Uploaded Files",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3001/api/projects/uploaded-files",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "3001",
+          "path": ["api", "projects", "uploaded-files"]
+        }
+      }
+    }
+  ]
+}
