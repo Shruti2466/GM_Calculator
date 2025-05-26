@@ -1,0 +1,1141 @@
+"use client"
+import type React from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { getToken } from "@/utils/auth"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import {
+  Check,
+  AlertCircle,
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  Calculator,
+} from "lucide-react"
+import { useToast } from "@/components/ui/use-toast"
+import { Skeleton } from "@/components/ui/skeleton"
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
+
+interface UploadedFile {
+  id: number
+  fileName: string
+  uploadedBy: string
+  uploadedAt: string
+  sheetType: string
+  sheetName: string
+  version: number
+  is_current: boolean
+  filePath?: string
+}
+
+interface AdditionalCost {
+  id: number
+  cost_name: string
+  cost: string
+  created_at?: string
+  created_by?: string
+  updated_at?: string
+  updated_by?: string
+}
+
+interface ExchangeRate {
+  id: number
+  rate: number
+  updated_at: string
+  updated_by: string
+}
+
+type SortConfig = {
+  key: keyof UploadedFile | null
+  direction: "asc" | "desc"
+}
+
+export default function UploadMonthlyDataPage() {
+  const router = useRouter()
+  const { toast } = useToast()
+  const [isLoading, setIsLoading] = useState(true)
+  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+  const [isUploading, setIsUploading] = useState<{ [key: string]: boolean }>({})
+  const [selectedFiles, setSelectedFiles] = useState<{ [key: string]: File | null }>({
+    sheet1: null,
+    sheet2: null,
+    sheet3: null,
+    sheet4: null,
+    sheet5: null,
+    sheet6: null,
+  })
+
+  // Add pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(5)
+
+  const [sortConfig, setSortConfig] = useState<SortConfig>({
+    key: null,
+    direction: "asc",
+  })
+  const [additionalCosts, setAdditionalCosts] = useState<AdditionalCost[]>([])
+  const [newCostName, setNewCostName] = useState("")
+  const [newCostValue, setNewCostValue] = useState("")
+  const [exchangeRate, setExchangeRate] = useState<ExchangeRate | null>(null)
+  const [newExchangeRate, setNewExchangeRate] = useState("")
+  const [isEditingCost, setIsEditingCost] = useState<number | null>(null)
+  const [editCostName, setEditCostName] = useState("")
+  const [editCostValue, setEditCostValue] = useState("")
+  const [isLoadingCosts, setIsLoadingCosts] = useState(false)
+  const [isLoadingRate, setIsLoadingRate] = useState(false)
+  const [isSubmittingCost, setIsSubmittingCost] = useState(false)
+  const [isSubmittingRate, setIsSubmittingRate] = useState(false)
+  const [isDownloading, setIsDownloading] = useState<{ [key: number]: boolean }>({})
+  const [isCalculatingGM, setIsCalculatingGM] = useState(false)
+
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    sheetKey: "",
+    file: null as File | null,
+    message: "",
+  })
+
+  const sheetNames = {
+    sheet1: "Delivery Investment Report",
+    sheet2: "Salary Sheet",
+    sheet3: "Revenue",
+    sheet4: "Project Metrics",
+    sheet5: "Client Feedback",
+    sheet6: "Team Utilization",
+  }
+
+  const sheetMappings = {
+    sheet1: { id: 1, name: "Delivery Investment Report" },
+    sheet2: { id: 2, name: "Salary Sheet" },
+    sheet3: { id: 3, name: "Revenue" },
+    sheet4: { id: 4, name: "Project Metrics" },
+    sheet5: { id: 5, name: "Client Feedback" },
+    sheet6: { id: 6, name: "Team Utilization" },
+  }
+
+  useEffect(() => {
+    const token = getToken()
+    if (!token) {
+      router.push("/login")
+    }
+    fetchUploadedFiles()
+    fetchExchangeRate()
+    fetchAdditionalCosts()
+  }, [router])
+
+  const fetchUploadedFiles = async () => {
+    setIsLoading(true)
+    try {
+      const token = getToken()
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/uploaded-sheets`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) throw new Error("Failed to fetch uploaded files")
+
+      const data = await response.json()
+      console.log("API Response:", data) // Log the raw API response
+      console.log("Sheet Mappings:", sheetMappings)
+      // Transform backend data to match our frontend interface
+      const transformedData = data.map((file: any) => {
+        const sheetKey = Object.entries(sheetMappings).find(([key, value]) => value.name === file.sheet_name)?.[0]
+
+        if (!sheetKey) {
+          console.warn(`No matching sheetKey found for sheet_name: ${file.sheet_name}`)
+        }
+
+        return {
+          id: file.id,
+          fileName: file.file_name,
+          uploadedBy: file.uploaded_by || "Unknown",
+          uploadedAt: file.uploaded_at,
+          sheetType: sheetKey || "unknown", // Default to "unknown" if no match is found
+          sheetName: file.sheet_name || "Unknown Sheet",
+          version: file.version || 1,
+          is_current: file.is_current === 1, // Convert 0/1 to false/true
+          filePath: file.file_path || `/uploads/monthly-data/${file.file_name}`, // Use file_path from API or construct a default path
+        }
+      })
+      console.log("Transformed Data:", transformedData)
+      setUploadedFiles(transformedData)
+      console.log("Uploaded Files:", uploadedFiles) // This will log the old value, not the updated one.
+    } catch (error) {
+      console.error("Error fetching uploaded files:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load uploaded files. Please try again later.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  const fetchAdditionalCosts = async () => {
+    setIsLoadingCosts(true)
+    try {
+      const token = getToken()
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/additional-costs`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) throw new Error("Failed to fetch additional costs")
+
+      const data = await response.json()
+      setAdditionalCosts(data)
+    } catch (error) {
+      console.error("Error fetching additional costs:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load additional costs. Please try again later.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoadingCosts(false)
+    }
+  }
+
+  const fetchExchangeRate = async () => {
+    setIsLoadingRate(true)
+    try {
+      const token = getToken()
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/exchange-rate/usd`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+
+      if (!response.ok) throw new Error("Failed to fetch exchange rate")
+
+      const data = await response.json()
+      console.log("Exchange Rate API Response:", data) // Debug log
+      setExchangeRate(data)
+    } catch (error) {
+      console.error("Error fetching exchange rate:", error)
+      toast({
+        title: "Error",
+        description: "Failed to load exchange rate. Please try again later.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoadingRate(false)
+    }
+  }
+
+  // Updated file download function to use the new API
+  const handleDownloadFile = async (fileId: number, fileName: string, filePath: string) => {
+    setIsDownloading((prev) => ({ ...prev, [fileId]: true }))
+    try {
+      const token = getToken()
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/download`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ filePath }),
+      })
+
+      if (!response.ok) throw new Error("Failed to download file")
+
+      // Create a blob from the response
+      const blob = await response.blob()
+
+      // Create a download link and trigger the download
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.style.display = "none"
+      a.href = url
+      a.download = fileName
+      document.body.appendChild(a)
+      a.click()
+
+      // Clean up
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      toast({
+        title: "Download Started",
+        description: `Downloading ${fileName}`,
+      })
+    } catch (error) {
+      console.error("Error downloading file:", error)
+      toast({
+        title: "Download Failed",
+        description: "Failed to download the file. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsDownloading((prev) => ({ ...prev, [fileId]: false }))
+    }
+  }
+
+  const handleFileChange = async (sheetKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0]
+      console.log("Selected file:", file.name)
+      console.log("Sheet key:", sheetKey)
+
+      // Automatically upload the file for "Salary Sheet", "Delivery Investment Report", or "Revenue"
+      if (sheetKey === "sheet2" || sheetKey === "sheet1" || sheetKey === "sheet3") {
+        setSelectedFiles((prev) => ({ ...prev, [sheetKey]: file }))
+        await handleUpload(sheetKey, file) // Ensure this is called immediately
+        return
+      }
+
+      // For other sheets, check if the sheet is already uploaded
+      const uploadedFile = uploadedFiles.find((file) => file.sheetType === sheetKey)
+
+      if (uploadedFile) {
+        setConfirmDialog({
+          isOpen: true,
+          sheetKey: sheetKey,
+          file: file,
+          message: `${uploadedFile.sheetName} has already been uploaded by ${uploadedFile.uploadedBy}. Do you wish to replace it?`,
+        })
+        return
+      }
+
+      // Proceed with the upload if the file is not already uploaded
+      setSelectedFiles((prev) => ({ ...prev, [sheetKey]: file }))
+      await handleUpload(sheetKey, file)
+    }
+  }
+
+  const handleCancelUpload = () => {
+    setConfirmDialog((prev) => ({
+      ...prev,
+      isOpen: false,
+    }))
+    // Reset the selected file for the relevant sheetKey
+    setSelectedFiles((prev) => ({
+      ...prev,
+      [confirmDialog.sheetKey]: null,
+    }))
+  }
+
+  const handleConfirmUpload = async () => {
+    setConfirmDialog({ ...confirmDialog, isOpen: false })
+    if (confirmDialog.sheetKey && confirmDialog.file) {
+      setSelectedFiles((prev) => ({ ...prev, [confirmDialog.sheetKey]: confirmDialog.file }))
+      await handleUpload(confirmDialog.sheetKey, confirmDialog.file)
+    }
+  }
+
+  // In handleUpload:
+  const handleUpload = async (sheetKey: string, file: File) => {
+    if (!file) return
+    setIsUploading((prev) => ({ ...prev, [sheetKey]: true }))
+    try {
+      const token = getToken()
+      const formData = new FormData()
+      formData.append("file", file)
+      formData.append("sheet_name", sheetMappings[sheetKey as keyof typeof sheetMappings].name)
+
+      // Determine the API endpoint based on the sheetKey
+      const apiEndpoint =
+        sheetKey === "sheet2" // Salary Sheet
+          ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/salary-sheet`
+          : sheetKey === "sheet3" // Revenue Sheet
+            ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/revenue-sheet`
+            : `${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data`
+
+      console.log(`Uploading to endpoint: ${apiEndpoint}`)
+
+      // First upload the file content
+      const uploadResponse = await fetch(apiEndpoint, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      })
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json()
+        console.error("Upload error:", errorData)
+        throw new Error(errorData.error || "Failed to upload file")
+      }
+
+      const uploadData = await uploadResponse.json()
+      console.log("Upload response:", uploadData)
+
+      // Use the actual file path returned from the API
+      const actualFilePath = uploadData.filePath ? uploadData.filePath.replace(/^.*[\\/]/, "") : file.name
+      const relativePath = `/uploads/monthly-data/${actualFilePath}`
+
+      // Then track the upload in the new system
+      const trackResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/track-upload`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          sheet_name: sheetMappings[sheetKey as keyof typeof sheetMappings].name,
+          file_name: file.name,
+          file_path: relativePath, // Use the actual file path with timestamp
+        }),
+      })
+
+      if (!trackResponse.ok) {
+        const errorData = await trackResponse.json()
+        console.error("Track upload error:", errorData)
+        throw new Error(errorData.error || "Failed to track upload")
+      }
+
+      const uploadedFile = await trackResponse.json()
+      console.log("Track upload response:", uploadedFile)
+
+      // Append the new file to the upload history
+      setUploadedFiles((prev) => [
+        ...prev,
+        {
+          id: uploadedFile.id,
+          fileName: uploadedFile.file_name,
+          uploadedBy: uploadedFile.uploaded_by,
+          uploadedAt: uploadedFile.uploaded_at,
+          sheetType: sheetKey,
+          sheetName: sheetMappings[sheetKey as keyof typeof sheetMappings].name,
+          version: uploadedFile.version || 1,
+          is_current: true, // Assuming the new upload is the current one
+          filePath: uploadedFile.file_path || relativePath, // Use the actual file path
+        },
+      ])
+
+      toast({
+        title: "Upload Successful",
+        description: `${sheetMappings[sheetKey as keyof typeof sheetMappings].name} uploaded successfully.`,
+      })
+
+      setSelectedFiles((prev) => ({ ...prev, [sheetKey]: null }))
+    } catch (error) {
+      console.error("Upload failed:", error)
+      toast({
+        title: "Upload Failed",
+        description: `Failed to upload the file: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive",
+      })
+    } finally {
+      setIsUploading((prev) => ({ ...prev, [sheetKey]: false }))
+    }
+  }
+
+  const isFileUploaded = (sheetKey: string) => uploadedFiles.some((file) => file.sheetType === sheetKey)
+
+  const getUploadedFileInfo = (sheetKey: string) => uploadedFiles.find((file) => file.sheetType === sheetKey)
+  console.log("Uploaded Files:", uploadedFiles)
+
+  console.log("Is File Uploaded:", isFileUploaded("sheet1"))
+  console.log("Uploaded File Info:", getUploadedFileInfo("sheet1"))
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    if (isNaN(date.getTime())) {
+      return "Invalid Date"
+    }
+    return date.toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    })
+  }
+
+  const requestSort = (key: keyof UploadedFile) => {
+    let direction: "asc" | "desc" = "asc"
+
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc"
+    }
+
+    setSortConfig({ key, direction })
+  }
+
+  // Add function to get sorted items
+  const getSortedItems = () => {
+    if (!sortConfig.key) return uploadedFiles
+
+    return [...uploadedFiles].sort((a, b) => {
+      if (a[sortConfig.key!] === null) return 1
+      if (b[sortConfig.key!] === null) return -1
+
+      const aValue = a[sortConfig.key!]
+      const bValue = b[sortConfig.key!]
+
+      // Handle special case for version which is a number
+      if (sortConfig.key === "version") {
+        return sortConfig.direction === "asc" ? Number(aValue) - Number(bValue) : Number(bValue) - Number(aValue)
+      }
+
+      // Handle special case for is_current which is a boolean
+      if (sortConfig.key === "is_current") {
+        return sortConfig.direction === "asc"
+          ? a.is_current === b.is_current
+            ? 0
+            : a.is_current
+              ? -1
+              : 1
+          : a.is_current === b.is_current
+            ? 0
+            : a.is_current
+              ? 1
+              : -1
+      }
+
+      // Handle dates
+      if (sortConfig.key === "uploadedAt") {
+        const dateA = new Date(a.uploadedAt).getTime()
+        const dateB = new Date(b.uploadedAt).getTime()
+        return sortConfig.direction === "asc" ? dateA - dateB : dateB - dateA
+      }
+
+      // Default string comparison
+      if (typeof aValue === "string" && typeof bValue === "string") {
+        return sortConfig.direction === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
+      }
+
+      return 0
+    })
+  }
+
+  // Get the sorted items
+  const sortedItems = getSortedItems()
+
+  // Calculate pagination
+  const indexOfLastItem = currentPage * itemsPerPage
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage
+  const currentItems = sortedItems.slice(indexOfFirstItem, indexOfLastItem)
+  const totalPages = Math.ceil(sortedItems.length / itemsPerPage)
+
+  // Change page
+  const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
+  const nextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages))
+  const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1))
+
+  const handleAddCost = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newCostName.trim() || !newCostValue.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter both name and value for the additional cost.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmittingCost(true)
+    try {
+      const token = getToken()
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/additional-costs`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cost_name: newCostName,
+          cost: newCostValue,
+        }),
+      })
+
+      if (!response.ok) throw new Error("Failed to add additional cost")
+
+      const newCost = await response.json()
+      setAdditionalCosts([newCost, ...additionalCosts]) // Add to the beginning of the array
+      setNewCostName("")
+      setNewCostValue("")
+      toast({
+        title: "Success",
+        description: "Additional cost added successfully.",
+      })
+    } catch (error) {
+      console.error("Error adding additional cost:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add additional cost. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmittingCost(false)
+    }
+  }
+
+  const handleEditCost = (cost: AdditionalCost) => {
+    setIsEditingCost(cost.id)
+    setEditCostName(cost.cost_name)
+    setEditCostValue(cost.cost)
+  }
+
+  const handleUpdateCost = async (id: number) => {
+    if (!editCostName.trim() || !editCostValue.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter both name and value for the additional cost.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmittingCost(true)
+    try {
+      const token = getToken()
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/additional-costs/${id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: editCostName,
+          value: Number.parseFloat(editCostValue),
+        }),
+      })
+
+      if (!response.ok) throw new Error("Failed to update additional cost")
+
+      const updatedCost = await response.json()
+      setAdditionalCosts(additionalCosts.map((cost) => (cost.id === id ? updatedCost : cost)))
+      setIsEditingCost(null)
+      toast({
+        title: "Success",
+        description: "Additional cost updated successfully.",
+      })
+    } catch (error) {
+      console.error("Error updating additional cost:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update additional cost. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmittingCost(false)
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditingCost(null)
+  }
+
+  const handleUpdateExchangeRate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newExchangeRate.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a value for the exchange rate.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmittingRate(true)
+    try {
+      const token = getToken() // Ensure this function retrieves a valid token
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/exchange-rate/usd`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          rate: Number.parseFloat(newExchangeRate),
+        }),
+      })
+
+      if (!response.ok) throw new Error("Failed to update exchange rate")
+
+      const updatedRate = await response.json()
+      setExchangeRate(updatedRate)
+      setNewExchangeRate("")
+      toast({
+        title: "Success",
+        description: "Exchange rate updated successfully.",
+      })
+    } catch (error) {
+      console.error("Error updating exchange rate:", error)
+      toast({
+        title: "Error",
+        description: "Failed to update exchange rate. Please try again.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmittingRate(false)
+    }
+  }
+  const getSortIcon = (key: keyof UploadedFile) => {
+    if (sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-1 h-4 w-4 inline" />
+    }
+
+    return sortConfig.direction === "asc" ? (
+      <ArrowUp className="ml-1 h-4 w-4 inline text-primary" />
+    ) : (
+      <ArrowDown className="ml-1 h-4 w-4 inline text-primary" />
+    )
+  }
+
+  const renderUploadCard = (sheetKey: string, index: number) => {
+    const sheetData = sheetMappings[sheetKey as keyof typeof sheetMappings]
+    const displayName = sheetData.name
+    const isUploaded = isFileUploaded(sheetKey)
+    const uploadedFile = getUploadedFileInfo(sheetKey)
+
+    return (
+      <Card key={sheetKey} className="shadow-sm relative">
+        {isUploaded && (
+          <div className="absolute top-2 right-2 z-10">
+            <Check className="h-6 w-6 text-green-500" />
+          </div>
+        )}
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold">{displayName}</CardTitle>
+          <CardDescription>
+            {isUploaded
+              ? `Last uploaded on ${formatDate(uploadedFile?.uploadedAt || "")} by ${uploadedFile?.uploadedBy}`
+              : `Upload the ${displayName} Excel file`}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex flex-col space-y-2">
+              <Label htmlFor={`${sheetKey}-upload`} className="text-sm font-medium">
+                {isUploaded ? "Replace file" : "Select file"}
+              </Label>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    id={`${sheetKey}-upload`}
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={(e) => handleFileChange(sheetKey, e)}
+                    className="cursor-pointer"
+                  />
+                </div>
+              </div>
+              {selectedFiles[sheetKey] && (
+                <p className="text-xs text-green-600">✓ {selectedFiles[sheetKey]?.name} selected</p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const handleCalculateGM = async () => {
+    setIsCalculatingGM(true)
+    try {
+      const token = getToken()
+
+      // First API call - Calculate Interim Cost
+      const costResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/interim-cost`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!costResponse.ok) {
+        throw new Error("Failed to calculate interim cost")
+      }
+
+      // Second API call - Calculate Interim Project GM
+      const gmResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/interim-project-gm`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!gmResponse.ok) {
+        throw new Error("Failed to calculate interim project GM")
+      }
+
+      toast({
+        title: "Success",
+        description: "GM calculation completed successfully",
+      })
+    } catch (error) {
+      console.error("Error calculating GM:", error)
+      toast({
+        title: "Error",
+        description: `Failed to calculate GM: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive",
+      })
+    } finally {
+      setIsCalculatingGM(false)
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Upload Monthly Data</h1>
+          <p className="text-muted-foreground mt-1">Upload monthly Excel sheets for reporting and analysis</p>
+        </div>
+        <Button onClick={handleCalculateGM} disabled={isCalculatingGM} className="flex items-center gap-2">
+          <Calculator className="h-4 w-4" />
+          {isCalculatingGM ? "Calculating..." : "Calculate GM"}
+        </Button>
+      </div>
+      <Tabs defaultValue="upload" className="w-full">
+        <TabsList className="mb-4">
+          <TabsTrigger value="upload">Upload Files</TabsTrigger>
+          <TabsTrigger value="history">Upload History</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+        <TabsContent value="upload">
+          <Alert className="mb-6 bg-muted/50">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Please upload Excel files (.xlsx or .xls) for each required sheet. Files will be stored in the system and
+              accessible to all users.
+            </AlertDescription>
+          </Alert>
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Array(6)
+                .fill(0)
+                .map((_, i) => (
+                  <Card key={i} className="shadow-sm">
+                    <CardHeader className="pb-3">
+                      <Skeleton className="h-6 w-48" />
+                      <Skeleton className="h-4 w-full mt-2" />
+                    </CardHeader>
+                    <CardContent>
+                      <Skeleton className="h-10 w-full mb-2" />
+                      <Skeleton className="h-10 w-full" />
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {Object.keys(sheetNames).map((sheetKey, index) => renderUploadCard(sheetKey, index))}
+            </div>
+          )}
+        </TabsContent>
+        <TabsContent value="history">
+          <Card>
+            <CardHeader>
+              <CardTitle>Upload History</CardTitle>
+              <CardDescription>View all previously uploaded monthly data files</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                  <Skeleton className="h-12 w-full" />
+                </div>
+              ) : sortedItems.length > 0 ? (
+                <>
+                  <div className="rounded-md border">
+                    <table className="min-w-full divide-y divide-border">
+                      <thead>
+                        <tr className="bg-muted/50">
+                          <th
+                            className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
+                            onClick={() => requestSort("sheetName")}
+                          >
+                            Sheet Name {getSortIcon("sheetName")}
+                          </th>
+                          <th
+                            className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
+                            onClick={() => requestSort("fileName")}
+                          >
+                            File Name {getSortIcon("fileName")}
+                          </th>
+
+                          <th
+                            className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
+                            onClick={() => requestSort("version")}
+                          >
+                            Version {getSortIcon("version")}
+                          </th>
+                          <th
+                            className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
+                            onClick={() => requestSort("uploadedBy")}
+                          >
+                            Uploaded By {getSortIcon("uploadedBy")}
+                          </th>
+                          <th
+                            className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
+                            onClick={() => requestSort("uploadedAt")}
+                          >
+                            Uploaded At {getSortIcon("uploadedAt")}
+                          </th>
+                          <th
+                            className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
+                            onClick={() => requestSort("is_current")}
+                          >
+                            Status {getSortIcon("is_current")}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {currentItems.map((file) => (
+                          <tr key={file.id} className="hover:bg-muted/30">
+                            <td className="px-4 py-3 text-sm">{file.sheetName}</td>
+                            <td className="px-4 py-3 text-sm">
+                              <button
+                                className="text-primary hover:text-primary/80 hover:underline flex items-center gap-1"
+                                onClick={() => handleDownloadFile(file.id, file.fileName, file.filePath || "")}
+                                disabled={isDownloading[file.id]}
+                              >
+                                {file.fileName}
+                                {isDownloading[file.id] ? (
+                                  <Skeleton className="h-4 w-4 rounded-full animate-spin" />
+                                ) : (
+                                  <Download className="h-4 w-4 inline ml-1" />
+                                )}
+                              </button>
+                            </td>
+                            <td className="px-4 py-3 text-sm">{file.version}</td>
+                            <td className="px-4 py-3 text-sm">{file.uploadedBy}</td>
+                            <td className="px-4 py-3 text-sm">{formatDate(file.uploadedAt)}</td>
+                            <td className="px-4 py-3 text-sm">
+                              {file.is_current ? (
+                                <span className="text-green-600 font-medium">Active</span>
+                              ) : (
+                                <span className="text-red-600 font-medium">Inactive</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  <div className="flex items-center justify-between mt-4">
+                    <div className="text-sm text-muted-foreground">
+                      Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, sortedItems.length)} of{" "}
+                      {sortedItems.length} files
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={prevPage}
+                        disabled={currentPage === 1}
+                        className="h-8 w-8 p-0"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                        <span className="sr-only">Previous page</span>
+                      </Button>
+                      {Array.from({ length: totalPages }, (_, i) => (
+                        <Button
+                          key={i + 1}
+                          variant={currentPage === i + 1 ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => paginate(i + 1)}
+                          className="h-8 w-8 p-0"
+                        >
+                          {i + 1}
+                        </Button>
+                      ))}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={nextPage}
+                        disabled={currentPage === totalPages}
+                        className="h-8 w-8 p-0"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                        <span className="sr-only">Next page</span>
+                      </Button>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <p>No uploaded files found.</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        <TabsContent value="settings">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Additional Costs Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Additional Costs</CardTitle>
+                <CardDescription>Manage additional costs for financial calculations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleAddCost} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="cost-name">Cost Name</Label>
+                      <Input
+                        id="cost-name"
+                        value={newCostName}
+                        onChange={(e) => setNewCostName(e.target.value)}
+                        placeholder="Enter cost name"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="cost-value">Value</Label>
+                      <Input
+                        id="cost-value"
+                        value={newCostValue}
+                        onChange={(e) => setNewCostValue(e.target.value)}
+                        placeholder="Enter value"
+                        type="number"
+                        step="0.01"
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" className="w-full" disabled={isSubmittingCost}>
+                    {isSubmittingCost ? "Adding..." : "Add Cost"}
+                  </Button>
+                </form>
+
+                <div className="mt-6">
+                  <h3 className="text-sm font-medium mb-2">Existing Costs</h3>
+                  {isLoadingCosts ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  ) : additionalCosts.length > 0 ? (
+                    <div className="rounded-md border divide-y">
+                      {additionalCosts.map((cost) => (
+                        <div key={cost.id} className="p-3">
+                          {isEditingCost === cost.id ? (
+                            <div className="space-y-3">
+                              <div className="grid grid-cols-2 gap-2">
+                                <Input
+                                  value={editCostName}
+                                  onChange={(e) => setEditCostName(e.target.value)}
+                                  placeholder="Cost name"
+                                />
+                                <Input
+                                  value={editCostValue}
+                                  onChange={(e) => setEditCostValue(e.target.value)}
+                                  placeholder="Value"
+                                  type="number"
+                                  step="0.01"
+                                />
+                              </div>
+                              <div className="flex justify-end gap-2">
+                                <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                                  Cancel
+                                </Button>
+                                <Button size="sm" onClick={() => handleUpdateCost(cost.id)} disabled={isSubmittingCost}>
+                                  {isSubmittingCost ? "Saving..." : "Save"}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col">
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <p className="font-medium">{cost.cost_name}</p>
+                                  <p className="text-sm text-muted-foreground">${cost.cost}</p>
+                                </div>
+                                <Button variant="ghost" size="sm" onClick={() => handleEditCost(cost)}>
+                                  Edit
+                                </Button>
+                              </div>
+                              <div className="mt-2 space-y-1">
+                                {/* {cost.created_at && cost.created_by && ( */}
+                                <div className="flex items-center text-xs text-muted-foreground">
+                                  Created on {formatDate(cost.created_at)} by {cost.created_by}
+                                </div>
+                                {/* )} */}
+                                {cost.updated_at && cost.updated_by && (
+                                  <div className="flex items-center text-xs text-muted-foreground">
+                                    <Clock className="h-3 w-3 mr-1" />
+                                    Last updated on {formatDate(cost.updated_at)} by {cost.updated_by}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No additional costs found.</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* US Exchange Rate Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle>US Exchange Rate</CardTitle>
+                <CardDescription>Manage the USD exchange rate for financial calculations</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {isLoadingRate ? (
+                    <Skeleton className="h-20 w-full" />
+                  ) : (
+                    <div className="p-4 bg-muted rounded-lg">
+                      <p className="text-sm text-muted-foreground">Current Exchange Rate</p>
+                      <div className="flex items-baseline mt-1">
+                        <p className="text-3xl font-bold">{exchangeRate?.rate || "N/A"}</p>
+                        <p className="ml-2 text-sm text-muted-foreground">USD</p>
+                      </div>
+                      {exchangeRate && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Last updated on {formatDate(exchangeRate.updated_at)} by {exchangeRate.updated_by}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  <form onSubmit={handleUpdateExchangeRate} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="exchange-rate">Update Exchange Rate</Label>
+                      <Input
+                        id="exchange-rate"
+                        value={newExchangeRate}
+                        onChange={(e) => setNewExchangeRate(e.target.value)}
+                        placeholder="Enter new exchange rate"
+                        type="number"
+                        step="0.0001"
+                      />
+                    </div>
+                    <Button type="submit" className="w-full" disabled={isSubmittingRate}>
+                      {isSubmittingRate ? "Updating..." : "Update Rate"}
+                    </Button>
+                  </form>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+      </Tabs>
+      {/* Confirmation dialog component */}
+      <ConfirmationDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={handleCancelUpload}
+        onConfirm={handleConfirmUpload}
+        title="Confirm File Replacement"
+        description={confirmDialog.message}
+        confirmText="Replace File"
+        cancelText="Cancel"
+      />
+    </div>
+  )
+}

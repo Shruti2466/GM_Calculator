@@ -54,14 +54,17 @@ exports.login = async (req, res) => {
 
 exports.register = async (req, res) => {
   logger.info("In register >>> ");
-  const { name, email, password, role_id } = req.body; // `role_id` corresponds to the `id` column in the `roles` table.
+  const { name, email, password } = req.body; // Removed role_id from destructuring
 
   try {
     // Check if the employee name exists in the employees table
-    const employeeExists = await db.Employee.findOne({ where: { employee_name: name } });
-    if (!employeeExists) {
+    const employee = await db.Employee.findOne({ where: { employee_name: name } });
+    if (!employee) {
       return res.status(400).json({ message: "Employee does not exist in the system." });
     }
+
+    // Fetch role_id from the employee record
+    const role_id = employee.role_id;
 
     // Validate role_id (which maps to the `id` column in the `roles` table)
     const role = await db.Role.findByPk(role_id);
@@ -78,7 +81,7 @@ exports.register = async (req, res) => {
       name,
       email,
       password: hashedPassword,
-      role_id, // This maps to the `id` column in the `roles` table
+      role_id, // Use the role_id from the employee record
     });
     logger.info("after DB create");
     logger.info(user);
@@ -87,8 +90,8 @@ exports.register = async (req, res) => {
     const token = jwt.sign(
       {
         id: user.id,
-        role_id: user.role_id, // This is the foreign key in the `users` table
-        role: role.role_name, // Use the role name fetched from the `roles` table
+        role_id: user.role_id,
+        role: role.role_name,
         email: user.email,
       },
       process.env.JWT_SECRET,

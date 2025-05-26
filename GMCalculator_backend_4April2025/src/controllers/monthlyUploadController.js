@@ -643,8 +643,8 @@ exports.calculateInterimCost = async (req, res) => {
         d.project_code AS ProjectId,
         d.employee_id AS EmpId,
         CAST(d.technical_involvement AS DECIMAL(3,2)) AS TechnicalInvolvement,
-        ROUND(
-          ((CAST(s.CTC AS DECIMAL(10,2)) * 100000) / 12) / 83 * CAST(d.technical_involvement AS DECIMAL(3,2)), 
+ROUND(
+          ((CAST(s.CTC AS DECIMAL(10,2))) / 12) / (SELECT rate FROM usexchangerate ORDER BY updatedat DESC LIMIT 1) * CAST(d.technical_involvement AS DECIMAL(3,2)), 
           2
         ) AS Salary,
         COALESCE((SELECT SUM(ac.cost) FROM additionalcosts ac), 0.00) AS AdditionalCost,
@@ -697,5 +697,18 @@ exports.calculateInterimProjectGM = async (req, res) => {
   } catch (error) {
     console.error("Error calculating interim project GM:", error.message);
     res.status(500).json({ error: "Failed to calculate interim project GM", details: error.message });
+  }
+};
+
+exports.getAllInterimProjectGM = async (req, res) => {
+  try {
+    const data = await db.sequelize.query(
+      `SELECT * FROM interimprojectgm ORDER BY Id DESC`,
+      { type: db.Sequelize.QueryTypes.SELECT }
+    );
+    res.status(200).json(data);
+  } catch (error) {
+    console.error("Error fetching interim project GM data:", error.message);
+    res.status(500).json({ error: "Failed to fetch interim project GM data", details: error.message });
   }
 };
