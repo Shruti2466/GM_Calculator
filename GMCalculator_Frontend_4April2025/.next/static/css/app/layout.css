@@ -1639,10 +1639,6 @@ body {
 .border-t-transparent {
   border-top-color: transparent;
 }
-.border-l-orange-500 {
-  --tw-border-opacity: 1;
-  border-left-color: rgb(249 115 22 / var(--tw-border-opacity, 1));
-}
 .bg-\[--color-bg\] {
   background-color: var(--color-bg);
 }
@@ -1733,10 +1729,6 @@ body {
 }
 .bg-white\/20 {
   background-color: rgb(255 255 255 / 0.2);
-}
-.bg-orange-100 {
-  --tw-bg-opacity: 1;
-  background-color: rgb(255 237 213 / var(--tw-bg-opacity, 1));
 }
 .bg-gradient-to-r {
   background-image: linear-gradient(to right, var(--tw-gradient-stops));

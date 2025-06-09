@@ -695,14 +695,18 @@ exports.calculateInterimCost = async (req, res) => {
     const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
     const monthYear = `${String(prevMonth).padStart(2, '0')}/${prevYear}`; // "03/2025"
  
-    // Check if data already exists for the previous month
+    // Check for existing data and delete if exists
     const [existingRows] = await db.sequelize.query(
       `SELECT COUNT(*) as count FROM interimcostcalculation WHERE month_year = ?`,
       { replacements: [monthYear], type: db.Sequelize.QueryTypes.SELECT }
     );
  
     if (existingRows.count > 0) {
-      return res.status(409).json({ error: "Interim cost data already exists for this month." });
+      // Delete existing data for this month_year
+      await db.sequelize.query(
+        `DELETE FROM interimcostcalculation WHERE month_year = ?`,
+        { replacements: [monthYear], type: db.Sequelize.QueryTypes.DELETE }
+      );
     }
  
     // Insert data filtered by current month (April 2025) but tagged as previous month (March 2025)
@@ -744,14 +748,18 @@ exports.calculateInterimProjectGM = async (req, res) => {
     const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
     const monthYear = `${String(prevMonth).padStart(2, '0')}/${prevYear}`;
  
-    // Check for existing data
+    // Check for existing data and delete if exists
     const [existingRows] = await db.sequelize.query(
       `SELECT COUNT(*) as count FROM interimprojectgm WHERE month_year = ?`,
       { replacements: [monthYear], type: db.Sequelize.QueryTypes.SELECT }
     );
  
     if (existingRows.count > 0) {
-      return res.status(409).json({ error: "Interim Project GM data already exists for this month." });
+      // Delete existing data for this month_year
+      await db.sequelize.query(
+        `DELETE FROM interimprojectgm WHERE month_year = ?`,
+        { replacements: [monthYear], type: db.Sequelize.QueryTypes.DELETE }
+      );
     }
  
     // Insert data (filtered by current upload month, tagged as previous month)
