@@ -20,6 +20,8 @@ db.DeliveryInvestmentReport = require("./deliveryinvestmentreportmodel.js")(sequ
 db.Monthly_uploaded_sheets = require("./Monthly_uploaded_sheets.js")(sequelize, Sequelize)
 db.Monthly_sheet = require("./Monthly_sheet.js")(sequelize, Sequelize)
 db.AdditionalCost = require("./additionalCostsModel")(sequelize, Sequelize);
+db.InterimProjectGM = require("./interimProjectGmModel.js")(sequelize, Sequelize)
+db.InterimCostCalculationModel = require("./interimCostCalculationModel.js")(sequelize, Sequelize)
 
 // Set up associations
 Object.keys(db).forEach((modelName) => {

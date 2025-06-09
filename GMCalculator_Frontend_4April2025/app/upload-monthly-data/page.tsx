@@ -1,5 +1,5 @@
 "use client"
-import type React from "react"
+import type * as React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -24,6 +24,7 @@ import {
 import { useToast } from "@/components/ui/use-toast"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
+import Swal from "sweetalert2"
 
 interface UploadedFile {
   id: number
@@ -120,6 +121,12 @@ export default function UploadMonthlyDataPage() {
     sheet4: { id: 4, name: "Project Metrics" },
     sheet5: { id: 5, name: "Client Feedback" },
     sheet6: { id: 6, name: "Team Utilization" },
+  }
+
+  const getPreviousMonthName = () => {
+    const now = new Date()
+    const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    return previousMonth.toLocaleString("en-US", { month: "long", year: "numeric" })
   }
 
   useEffect(() => {
@@ -435,7 +442,12 @@ export default function UploadMonthlyDataPage() {
 
   const isFileUploaded = (sheetKey: string) => uploadedFiles.some((file) => file.sheetType === sheetKey)
 
-  const getUploadedFileInfo = (sheetKey: string) => uploadedFiles.find((file) => file.sheetType === sheetKey)
+  const getUploadedFileInfo = (sheetKey: string) => {
+    return uploadedFiles
+      .filter((file) => file.sheetType === sheetKey)
+      .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0]
+  }
+
   console.log("Uploaded Files:", uploadedFiles)
 
   console.log("Is File Uploaded:", isFileUploaded("sheet1"))
@@ -766,12 +778,44 @@ export default function UploadMonthlyDataPage() {
         throw new Error("Failed to calculate interim project GM")
       }
 
+      // Check if response status is 201 (Created) for success
+      if (gmResponse.status === 201) {
+        // Show SweetAlert2 success message
+        await Swal.fire({
+          title: "Success!",
+          text: "GM Calculated Successfully",
+          icon: "success",
+          confirmButtonText: "OK",
+          confirmButtonColor: "#10b981", // Green color
+          timer: 3000, // Auto close after 3 seconds
+          timerProgressBar: true,
+          showClass: {
+            popup: "animate__animated animate__fadeInDown",
+          },
+          hideClass: {
+            popup: "animate__animated animate__fadeOutUp",
+          },
+        })
+      }
+
+      // Keep the existing toast as backup
       toast({
         title: "Success",
         description: "GM calculation completed successfully",
       })
     } catch (error) {
       console.error("Error calculating GM:", error)
+
+      // Show error SweetAlert
+      await Swal.fire({
+        title: "Error!",
+        text: `Failed to calculate GM: ${error instanceof Error ? error.message : "Unknown error"}`,
+        icon: "error",
+        confirmButtonText: "OK",
+        confirmButtonColor: "#ef4444", // Red color
+      })
+
+      // Keep existing toast for error as well
       toast({
         title: "Error",
         description: `Failed to calculate GM: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -783,349 +827,380 @@ export default function UploadMonthlyDataPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Upload Monthly Data</h1>
-          <p className="text-muted-foreground mt-1">Upload monthly Excel sheets for reporting and analysis</p>
+    <div className="h-full w-full max-w-full overflow-hidden">
+      <div className="h-full flex flex-col space-y-4 p-4">
+        <div className="flex flex-col space-y-2 md:flex-row md:items-center md:justify-between md:space-y-0 shrink-0">
+          <div className="min-w-0 flex-1">
+            <p className="text-muted-foreground truncate">Upload monthly Excel sheets for reporting and analysis</p>
+          </div>
+          <div className="shrink-0">
+            <Button onClick={handleCalculateGM} disabled={isCalculatingGM} className="flex items-center gap-2">
+              <Calculator className="h-4 w-4" />
+              {isCalculatingGM ? "Calculating..." : "Calculate GM"}
+            </Button>
+          </div>
         </div>
-        <Button onClick={handleCalculateGM} disabled={isCalculatingGM} className="flex items-center gap-2">
-          <Calculator className="h-4 w-4" />
-          {isCalculatingGM ? "Calculating..." : "Calculate GM"}
-        </Button>
-      </div>
-      <Tabs defaultValue="upload" className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="upload">Upload Files</TabsTrigger>
-          <TabsTrigger value="history">Upload History</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
-        </TabsList>
-        <TabsContent value="upload">
-          <Alert className="mb-6 bg-muted/50">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Please upload Excel files (.xlsx or .xls) for each required sheet. Files will be stored in the system and
-              accessible to all users.
-            </AlertDescription>
-          </Alert>
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array(6)
-                .fill(0)
-                .map((_, i) => (
-                  <Card key={i} className="shadow-sm">
-                    <CardHeader className="pb-3">
-                      <Skeleton className="h-6 w-48" />
-                      <Skeleton className="h-4 w-full mt-2" />
-                    </CardHeader>
-                    <CardContent>
-                      <Skeleton className="h-10 w-full mb-2" />
-                      <Skeleton className="h-10 w-full" />
-                    </CardContent>
-                  </Card>
-                ))}
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Object.keys(sheetNames).map((sheetKey, index) => renderUploadCard(sheetKey, index))}
-            </div>
-          )}
-        </TabsContent>
-        <TabsContent value="history">
-          <Card>
-            <CardHeader>
-              <CardTitle>Upload History</CardTitle>
-              <CardDescription>View all previously uploaded monthly data files</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="space-y-4">
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
-                  <Skeleton className="h-12 w-full" />
+
+        {/* Main Content - Remove internal scrolling */}
+        <div className="flex-1 min-h-0">
+          <Tabs defaultValue="upload" className="h-full flex flex-col">
+            <TabsList className="flex-shrink-0 mb-4">
+              <TabsTrigger value="upload">Upload Files</TabsTrigger>
+              <TabsTrigger value="history">Upload History</TabsTrigger>
+              <TabsTrigger value="settings">Settings</TabsTrigger>
+            </TabsList>
+
+            <div className="flex-1 min-h-0">
+              <TabsContent value="upload" className="h-full m-0">
+                <div className="h-full flex flex-col gap-4">
+                  <Alert className="flex-shrink-0 bg-muted/50">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>
+                      Please upload Excel files (.xlsx or .xls) for each required sheet. Files will be stored in the
+                      system and accessible to all users.
+                    </AlertDescription>
+                  </Alert>
+                  <Alert className="flex-shrink-0 bg-blue-50 border-blue-200">
+                    <AlertCircle className="h-4 w-4 text-blue-600" />
+                    <AlertDescription className="text-blue-800">
+                      You are uploading the sheets for <strong>{getPreviousMonthName()}</strong>.
+                    </AlertDescription>
+                  </Alert>
+
+                  <div className="flex-1 min-h-0">
+                    {isLoading ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 h-full">
+                        {Array(6)
+                          .fill(0)
+                          .map((_, i) => (
+                            <Card key={i} className="shadow-sm h-full">
+                              <CardHeader className="pb-3">
+                                <Skeleton className="h-6 w-48" />
+                                <Skeleton className="h-4 w-full mt-2" />
+                              </CardHeader>
+                              <CardContent className="flex-1">
+                                <Skeleton className="h-10 w-full mb-2" />
+                                <Skeleton className="h-10 w-full" />
+                              </CardContent>
+                            </Card>
+                          ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 h-full auto-rows-fr">
+                        {Object.keys(sheetNames).map((sheetKey, index) => renderUploadCard(sheetKey, index))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              ) : sortedItems.length > 0 ? (
-                <>
-                  <div className="rounded-md border">
-                    <table className="min-w-full divide-y divide-border">
-                      <thead>
-                        <tr className="bg-muted/50">
-                          <th
-                            className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
-                            onClick={() => requestSort("sheetName")}
-                          >
-                            Sheet Name {getSortIcon("sheetName")}
-                          </th>
-                          <th
-                            className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
-                            onClick={() => requestSort("fileName")}
-                          >
-                            File Name {getSortIcon("fileName")}
-                          </th>
+              </TabsContent>
 
-                          <th
-                            className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
-                            onClick={() => requestSort("version")}
-                          >
-                            Version {getSortIcon("version")}
-                          </th>
-                          <th
-                            className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
-                            onClick={() => requestSort("uploadedBy")}
-                          >
-                            Uploaded By {getSortIcon("uploadedBy")}
-                          </th>
-                          <th
-                            className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
-                            onClick={() => requestSort("uploadedAt")}
-                          >
-                            Uploaded At {getSortIcon("uploadedAt")}
-                          </th>
-                          <th
-                            className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
-                            onClick={() => requestSort("is_current")}
-                          >
-                            Status {getSortIcon("is_current")}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {currentItems.map((file) => (
-                          <tr key={file.id} className="hover:bg-muted/30">
-                            <td className="px-4 py-3 text-sm">{file.sheetName}</td>
-                            <td className="px-4 py-3 text-sm">
-                              <button
-                                className="text-primary hover:text-primary/80 hover:underline flex items-center gap-1"
-                                onClick={() => handleDownloadFile(file.id, file.fileName, file.filePath || "")}
-                                disabled={isDownloading[file.id]}
+              <TabsContent value="history" className="h-full m-0">
+                <Card className="h-full flex flex-col">
+                  <CardHeader className="flex-shrink-0">
+                    <CardTitle>Upload History</CardTitle>
+                    <CardDescription>View all previously uploaded monthly data files</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-1 min-h-0 p-6">
+                    {isLoading ? (
+                      <div className="space-y-4">
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                        <Skeleton className="h-12 w-full" />
+                      </div>
+                    ) : sortedItems.length > 0 ? (
+                      <div className="h-full flex flex-col">
+                        <div className="flex-1 min-h-0 overflow-auto">
+                          <div className="rounded-md border">
+                            <table className="min-w-full divide-y divide-border">
+                              <thead className="sticky top-0 bg-muted/50 z-10">
+                                <tr>
+                                  <th
+                                    className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
+                                    onClick={() => requestSort("sheetName")}
+                                  >
+                                    Sheet Name {getSortIcon("sheetName")}
+                                  </th>
+                                  <th
+                                    className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
+                                    onClick={() => requestSort("fileName")}
+                                  >
+                                    File Name {getSortIcon("fileName")}
+                                  </th>
+                                  <th
+                                    className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
+                                    onClick={() => requestSort("version")}
+                                  >
+                                    Version {getSortIcon("version")}
+                                  </th>
+                                  <th
+                                    className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
+                                    onClick={() => requestSort("uploadedBy")}
+                                  >
+                                    Uploaded By {getSortIcon("uploadedBy")}
+                                  </th>
+                                  <th
+                                    className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
+                                    onClick={() => requestSort("uploadedAt")}
+                                  >
+                                    Uploaded At {getSortIcon("uploadedAt")}
+                                  </th>
+                                  <th
+                                    className="px-4 py-3 text-left text-sm font-medium cursor-pointer hover:bg-muted/80"
+                                    onClick={() => requestSort("is_current")}
+                                  >
+                                    Status {getSortIcon("is_current")}
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-border">
+                                {currentItems.map((file) => (
+                                  <tr key={file.id} className="hover:bg-muted/30">
+                                    <td className="px-4 py-3 text-sm">{file.sheetName}</td>
+                                    <td className="px-4 py-3 text-sm">
+                                      <button
+                                        className="text-primary hover:text-primary/80 hover:underline flex items-center gap-1"
+                                        onClick={() => handleDownloadFile(file.id, file.fileName, file.filePath || "")}
+                                        disabled={isDownloading[file.id]}
+                                      >
+                                        {file.fileName}
+                                        {isDownloading[file.id] ? (
+                                          <Skeleton className="h-4 w-4 rounded-full animate-spin" />
+                                        ) : (
+                                          <Download className="h-4 w-4 inline ml-1" />
+                                        )}
+                                      </button>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm">{file.version}</td>
+                                    <td className="px-4 py-3 text-sm">{file.uploadedBy}</td>
+                                    <td className="px-4 py-3 text-sm">{formatDate(file.uploadedAt)}</td>
+                                    <td className="px-4 py-3 text-sm">
+                                      {file.is_current ? (
+                                        <span className="text-green-600 font-medium">Active</span>
+                                      ) : (
+                                        <span className="text-red-600 font-medium">Inactive</span>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+
+                        {/* Pagination - Fixed at bottom */}
+                        <div className="flex items-center justify-between mt-4 pt-4 border-t flex-shrink-0">
+                          <div className="text-sm text-muted-foreground">
+                            Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, sortedItems.length)} of{" "}
+                            {sortedItems.length} files
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={prevPage}
+                              disabled={currentPage === 1}
+                              className="h-8 w-8 p-0"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                              <span className="sr-only">Previous page</span>
+                            </Button>
+                            {Array.from({ length: totalPages }, (_, i) => (
+                              <Button
+                                key={i + 1}
+                                variant={currentPage === i + 1 ? "default" : "outline"}
+                                size="sm"
+                                onClick={() => paginate(i + 1)}
+                                className="h-8 w-8 p-0"
                               >
-                                {file.fileName}
-                                {isDownloading[file.id] ? (
-                                  <Skeleton className="h-4 w-4 rounded-full animate-spin" />
-                                ) : (
-                                  <Download className="h-4 w-4 inline ml-1" />
-                                )}
-                              </button>
-                            </td>
-                            <td className="px-4 py-3 text-sm">{file.version}</td>
-                            <td className="px-4 py-3 text-sm">{file.uploadedBy}</td>
-                            <td className="px-4 py-3 text-sm">{formatDate(file.uploadedAt)}</td>
-                            <td className="px-4 py-3 text-sm">
-                              {file.is_current ? (
-                                <span className="text-green-600 font-medium">Active</span>
-                              ) : (
-                                <span className="text-red-600 font-medium">Inactive</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                                {i + 1}
+                              </Button>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={nextPage}
+                              disabled={currentPage === totalPages}
+                              className="h-8 w-8 p-0"
+                            >
+                              <ChevronRight className="h-4 w-4" />
+                              <span className="sr-only">Next page</span>
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full">
+                        <p className="text-center text-muted-foreground">No uploaded files found.</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-                  {/* Pagination */}
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="text-sm text-muted-foreground">
-                      Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, sortedItems.length)} of{" "}
-                      {sortedItems.length} files
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={prevPage}
-                        disabled={currentPage === 1}
-                        className="h-8 w-8 p-0"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                        <span className="sr-only">Previous page</span>
-                      </Button>
-                      {Array.from({ length: totalPages }, (_, i) => (
-                        <Button
-                          key={i + 1}
-                          variant={currentPage === i + 1 ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => paginate(i + 1)}
-                          className="h-8 w-8 p-0"
-                        >
-                          {i + 1}
+              <TabsContent value="settings" className="h-full m-0">
+                <div className="grid gap-6 lg:grid-cols-2 h-full">
+                  {/* Additional Costs Section */}
+                  <Card className="flex flex-col h-full">
+                    <CardHeader className="flex-shrink-0">
+                      <CardTitle>Additional Costs</CardTitle>
+                      <CardDescription>Manage additional costs for financial calculations</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 min-h-0 flex flex-col">
+                      <form onSubmit={handleAddCost} className="space-y-4 flex-shrink-0">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="cost-name">Cost Name</Label>
+                            <Input
+                              id="cost-name"
+                              value={newCostName}
+                              onChange={(e) => setNewCostName(e.target.value)}
+                              placeholder="Enter cost name"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="cost-value">Value</Label>
+                            <Input
+                              id="cost-value"
+                              value={newCostValue}
+                              onChange={(e) => setNewCostValue(e.target.value)}
+                              placeholder="Enter value"
+                              type="number"
+                              step="0.01"
+                            />
+                          </div>
+                        </div>
+                        <Button type="submit" className="w-full" disabled={isSubmittingCost}>
+                          {isSubmittingCost ? "Adding..." : "Add Cost"}
                         </Button>
-                      ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={nextPage}
-                        disabled={currentPage === totalPages}
-                        className="h-8 w-8 p-0"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                        <span className="sr-only">Next page</span>
-                      </Button>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <p>No uploaded files found.</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="settings">
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Additional Costs Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Additional Costs</CardTitle>
-                <CardDescription>Manage additional costs for financial calculations</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleAddCost} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="cost-name">Cost Name</Label>
-                      <Input
-                        id="cost-name"
-                        value={newCostName}
-                        onChange={(e) => setNewCostName(e.target.value)}
-                        placeholder="Enter cost name"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="cost-value">Value</Label>
-                      <Input
-                        id="cost-value"
-                        value={newCostValue}
-                        onChange={(e) => setNewCostValue(e.target.value)}
-                        placeholder="Enter value"
-                        type="number"
-                        step="0.01"
-                      />
-                    </div>
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isSubmittingCost}>
-                    {isSubmittingCost ? "Adding..." : "Add Cost"}
-                  </Button>
-                </form>
+                      </form>
 
-                <div className="mt-6">
-                  <h3 className="text-sm font-medium mb-2">Existing Costs</h3>
-                  {isLoadingCosts ? (
-                    <div className="space-y-2">
-                      <Skeleton className="h-10 w-full" />
-                      <Skeleton className="h-10 w-full" />
-                    </div>
-                  ) : additionalCosts.length > 0 ? (
-                    <div className="rounded-md border divide-y">
-                      {additionalCosts.map((cost) => (
-                        <div key={cost.id} className="p-3">
-                          {isEditingCost === cost.id ? (
-                            <div className="space-y-3">
-                              <div className="grid grid-cols-2 gap-2">
-                                <Input
-                                  value={editCostName}
-                                  onChange={(e) => setEditCostName(e.target.value)}
-                                  placeholder="Cost name"
-                                />
-                                <Input
-                                  value={editCostValue}
-                                  onChange={(e) => setEditCostValue(e.target.value)}
-                                  placeholder="Value"
-                                  type="number"
-                                  step="0.01"
-                                />
-                              </div>
-                              <div className="flex justify-end gap-2">
-                                <Button variant="outline" size="sm" onClick={handleCancelEdit}>
-                                  Cancel
-                                </Button>
-                                <Button size="sm" onClick={() => handleUpdateCost(cost.id)} disabled={isSubmittingCost}>
-                                  {isSubmittingCost ? "Saving..." : "Save"}
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="flex flex-col">
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <p className="font-medium">{cost.cost_name}</p>
-                                  <p className="text-sm text-muted-foreground">${cost.cost}</p>
-                                </div>
-                                <Button variant="ghost" size="sm" onClick={() => handleEditCost(cost)}>
-                                  Edit
-                                </Button>
-                              </div>
-                              <div className="mt-2 space-y-1">
-                                {/* {cost.created_at && cost.created_by && ( */}
-                                <div className="flex items-center text-xs text-muted-foreground">
-                                  Created on {formatDate(cost.created_at)} by {cost.created_by}
-                                </div>
-                                {/* )} */}
-                                {cost.updated_at && cost.updated_by && (
-                                  <div className="flex items-center text-xs text-muted-foreground">
-                                    <Clock className="h-3 w-3 mr-1" />
-                                    Last updated on {formatDate(cost.updated_at)} by {cost.updated_by}
+                      <div className="mt-6 flex-1 min-h-0 flex flex-col">
+                        <h3 className="text-sm font-medium mb-2 flex-shrink-0">Existing Costs</h3>
+                        {isLoadingCosts ? (
+                          <div className="space-y-2">
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-10 w-full" />
+                          </div>
+                        ) : additionalCosts.length > 0 ? (
+                          <div className="rounded-md border divide-y flex-1 min-h-0 overflow-auto">
+                            {additionalCosts.map((cost) => (
+                              <div key={cost.id} className="p-3">
+                                {isEditingCost === cost.id ? (
+                                  <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <Input
+                                        value={editCostName}
+                                        onChange={(e) => setEditCostName(e.target.value)}
+                                        placeholder="Cost name"
+                                      />
+                                      <Input
+                                        value={editCostValue}
+                                        onChange={(e) => setEditCostValue(e.target.value)}
+                                        placeholder="Value"
+                                        type="number"
+                                        step="0.01"
+                                      />
+                                    </div>
+                                    <div className="flex justify-end gap-2">
+                                      <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                                        Cancel
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        onClick={() => handleUpdateCost(cost.id)}
+                                        disabled={isSubmittingCost}
+                                      >
+                                        {isSubmittingCost ? "Saving..." : "Save"}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col">
+                                    <div className="flex items-center justify-between">
+                                      <div>
+                                        <p className="font-medium">{cost.cost_name}</p>
+                                        <p className="text-sm text-muted-foreground">${cost.cost}</p>
+                                      </div>
+                                      <Button variant="ghost" size="sm" onClick={() => handleEditCost(cost)}>
+                                        Edit
+                                      </Button>
+                                    </div>
+                                    <div className="mt-2 space-y-1">
+                                      <div className="flex items-center text-xs text-muted-foreground">
+                                        Created on {formatDate(cost.created_at)} by {cost.created_by}
+                                      </div>
+                                      {cost.updated_at && cost.updated_by && (
+                                        <div className="flex items-center text-xs text-muted-foreground">
+                                          <Clock className="h-3 w-3 mr-1" />
+                                          Last updated on {formatDate(cost.updated_at)} by {cost.updated_by}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 )}
                               </div>
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">No additional costs found.</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* US Exchange Rate Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle>US Exchange Rate</CardTitle>
-                <CardDescription>Manage the USD exchange rate for financial calculations</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {isLoadingRate ? (
-                    <Skeleton className="h-20 w-full" />
-                  ) : (
-                    <div className="p-4 bg-muted rounded-lg">
-                      <p className="text-sm text-muted-foreground">Current Exchange Rate</p>
-                      <div className="flex items-baseline mt-1">
-                        <p className="text-3xl font-bold">{exchangeRate?.rate || "N/A"}</p>
-                        <p className="ml-2 text-sm text-muted-foreground">USD</p>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex items-center justify-center flex-1">
+                            <p className="text-sm text-muted-foreground">No additional costs found.</p>
+                          </div>
+                        )}
                       </div>
-                      {exchangeRate && (
-                        <p className="text-xs text-muted-foreground mt-2">
-                          Last updated on {formatDate(exchangeRate.updated_at)} by {exchangeRate.updated_by}
-                        </p>
-                      )}
-                    </div>
-                  )}
+                    </CardContent>
+                  </Card>
 
-                  <form onSubmit={handleUpdateExchangeRate} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="exchange-rate">Update Exchange Rate</Label>
-                      <Input
-                        id="exchange-rate"
-                        value={newExchangeRate}
-                        onChange={(e) => setNewExchangeRate(e.target.value)}
-                        placeholder="Enter new exchange rate"
-                        type="number"
-                        step="0.0001"
-                      />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={isSubmittingRate}>
-                      {isSubmittingRate ? "Updating..." : "Update Rate"}
-                    </Button>
-                  </form>
+                  {/* US Exchange Rate Section */}
+                  <Card className="flex flex-col h-full">
+                    <CardHeader className="flex-shrink-0">
+                      <CardTitle>US Exchange Rate</CardTitle>
+                      <CardDescription>Manage the USD exchange rate for financial calculations</CardDescription>
+                    </CardHeader>
+                    <CardContent className="flex-1 flex flex-col">
+                      <div className="space-y-4 flex-1">
+                        {isLoadingRate ? (
+                          <Skeleton className="h-20 w-full" />
+                        ) : (
+                          <div className="p-4 bg-muted rounded-lg">
+                            <p className="text-sm text-muted-foreground">Current Exchange Rate</p>
+                            <div className="flex items-baseline mt-1">
+                              <p className="text-3xl font-bold">{exchangeRate?.rate || "N/A"}</p>
+                              <p className="ml-2 text-sm text-muted-foreground">USD</p>
+                            </div>
+                            {exchangeRate && (
+                              <p className="text-xs text-muted-foreground mt-2">
+                                Last updated on {formatDate(exchangeRate.updated_at)} by {exchangeRate.updated_by}
+                              </p>
+                            )}
+                          </div>
+                        )}
+
+                        <form onSubmit={handleUpdateExchangeRate} className="space-y-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="exchange-rate">Update Exchange Rate</Label>
+                            <Input
+                              id="exchange-rate"
+                              value={newExchangeRate}
+                              onChange={(e) => setNewExchangeRate(e.target.value)}
+                              placeholder="Enter new exchange rate"
+                              type="number"
+                              step="0.0001"
+                            />
+                          </div>
+                          <Button type="submit" className="w-full" disabled={isSubmittingRate}>
+                            {isSubmittingRate ? "Updating..." : "Update Rate"}
+                          </Button>
+                        </form>
+                      </div>
+                    </CardContent>
+                  </Card>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
+      </div>
+
       {/* Confirmation dialog component */}
       <ConfirmationDialog
         isOpen={confirmDialog.isOpen}

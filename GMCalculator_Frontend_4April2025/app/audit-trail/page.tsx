@@ -27,8 +27,11 @@ export default function AuditTrailPage() {
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc")
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [entriesPerPage] = useState(10)
+  // Add pagination state at the beginning of the component
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  })
   const [isRefreshing, setIsRefreshing] = useState(false)
 
   const filteredAuditData = auditData.filter((entry) =>
@@ -37,11 +40,11 @@ export default function AuditTrailPage() {
     ),
   )
 
-  const indexOfLastEntry = currentPage * entriesPerPage
-  const indexOfFirstEntry = indexOfLastEntry - entriesPerPage
+  // Update the pagination logic
+  const totalPages = Math.ceil(filteredAuditData.length / pagination.pageSize)
+  const indexOfLastEntry = (pagination.pageIndex + 1) * pagination.pageSize
+  const indexOfFirstEntry = indexOfLastEntry - pagination.pageSize
   const currentEntries = filteredAuditData.slice(indexOfFirstEntry, indexOfLastEntry)
-
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
 
   const fetchAuditData = async () => {
     setIsLoading(true)
@@ -253,27 +256,46 @@ export default function AuditTrailPage() {
             </Table>
           </div>
 
+          {/* Update the pagination controls */}
           <div className="mt-6 flex items-center justify-between">
             <div className="text-sm text-muted-foreground">
               Showing {indexOfFirstEntry + 1} to {Math.min(indexOfLastEntry, filteredAuditData.length)} of{" "}
               {filteredAuditData.length} entries
             </div>
-            <div className="flex space-x-2">
+            <div className="flex items-center space-x-2">
+              <select
+                value={pagination.pageSize}
+                onChange={(e) => {
+                  setPagination((prev) => ({ ...prev, pageSize: Number(e.target.value), pageIndex: 0 }))
+                }}
+                className="border rounded px-2 py-1 text-sm"
+              >
+                {[5, 10, 20, 30].map((pageSize) => (
+                  <option key={pageSize} value={pageSize}>
+                    Show {pageSize}
+                  </option>
+                ))}
+              </select>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => paginate(currentPage - 1)}
-                disabled={currentPage === 1}
+                onClick={() => setPagination((prev) => ({ ...prev, pageIndex: Math.max(0, prev.pageIndex - 1) }))}
+                disabled={pagination.pageIndex === 0}
                 className="h-8 px-3"
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
                 Previous
               </Button>
+              <span className="text-sm">
+                Page {pagination.pageIndex + 1} of {totalPages}
+              </span>
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => paginate(currentPage + 1)}
-                disabled={indexOfLastEntry >= filteredAuditData.length}
+                onClick={() =>
+                  setPagination((prev) => ({ ...prev, pageIndex: Math.min(totalPages - 1, prev.pageIndex + 1) }))
+                }
+                disabled={pagination.pageIndex >= totalPages - 1}
                 className="h-8 px-3"
               >
                 Next

@@ -198,211 +198,181 @@ export default function LoginPage() {
     }
   }
 
-  return (
-    <div className="min-h-screen flex flex-col md:flex-row overflow-hidden">
-      {/* Left side - Brand/Image section
-      <div className="hidden md:flex md:w-1/2 bg-gradient-to-br from-primary/90 to-primary/70 text-white p-8 flex-col justify-between">
-        <div className="flex items-center space-x-2">
-          <Building className="h-8 w-8" />
-          <h1 className="text-2xl font-bold">Project Management</h1>
-        </div>
-
-        <div className="space-y-6 max-w-md">
-          <h2 className="text-3xl font-bold">Welcome to our Project Management Platform</h2>
-          <p className="text-lg opacity-90">
-            Streamline your workflow, collaborate with your team, and deliver projects on time.
-          </p>
-          <div className="grid grid-cols-2 gap-4 pt-6">
-            <div className="bg-white/10 p-4 rounded-lg">
-              <h3 className="font-medium mb-1">Task Management</h3>
-              <p className="text-sm opacity-80">Organize and prioritize your tasks efficiently</p>
-            </div>
-            <div className="bg-white/10 p-4 rounded-lg">
-              <h3 className="font-medium mb-1">Team Collaboration</h3>
-              <p className="text-sm opacity-80">Work together seamlessly with your team</p>
-            </div>
-            <div className="bg-white/10 p-4 rounded-lg">
-              <h3 className="font-medium mb-1">Project Tracking</h3>
-              <p className="text-sm opacity-80">Monitor progress and meet deadlines</p>
-            </div>
-            <div className="bg-white/10 p-4 rounded-lg">
-              <h3 className="font-medium mb-1">Resource Management</h3>
-              <p className="text-sm opacity-80">Allocate resources effectively</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="text-sm opacity-70">© 2024 Project Management. All rights reserved.</div>
-      </div> */}
-
-      {/* Right side - Auth forms */}
-      <div className="flex-1 flex items-center justify-center p-6 bg-background">
-        <Card className="w-full max-w-md shadow-lg border-border">
-          <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login" id="login-tab" className="text-base font-medium">
-                Login
-              </TabsTrigger>
-              <TabsTrigger value="register" className="text-base font-medium">
-                Register
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Login */}
-            <TabsContent value="login">
-              <CardHeader className="space-y-1">
-                <div className="flex justify-center mb-2 md:hidden">
-                  <Lock className="h-12 w-12 text-primary" />
-                </div>
-                <CardTitle className="text-2xl text-center font-bold">Sign In</CardTitle>
-                <CardDescription className="text-center">Access your account by signing in</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="name@example.com"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Password</Label>
-                      <Button variant="link" className="p-0 h-auto text-xs" type="button">
-                        Forgot password?
-                      </Button>
-                    </div>
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                    />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Signing In...
-                      </>
-                    ) : (
-                      <>
-                        <LogIn className="mr-2 h-4 w-4" />
-                        Sign In
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </TabsContent>
-
-            {/* Register */}
-            <TabsContent value="register">
-              <CardHeader className="space-y-1">
-                <div className="flex justify-center mb-2 md:hidden">
-                  <UserPlus className="h-12 w-12 text-primary" />
-                </div>
-                <CardTitle className="text-2xl text-center font-bold">Create Account</CardTitle>
-                <CardDescription className="text-center">Fill in your information to register</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleRegister} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="register-name">Full Name</Label>
-                    <Input
-                      id="register-name"
-                      placeholder="John Doe"
-                      required
-                      value={registerName}
-                      onChange={(e) => setRegisterName(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="register-email">Email</Label>
-                    <Input
-                      id="register-email"
-                      type="email"
-                      placeholder="name@example.com"
-                      required
-                      value={registerEmail}
-                      onChange={(e) => setRegisterEmail(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="register-password">Password</Label>
-                    <Input
-                      id="register-password"
-                      type="password"
-                      placeholder="••••••••"
-                      required
-                      value={registerPassword}
-                      onChange={(e) => setRegisterPassword(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm Password</Label>
-                    <Input
-                      id="confirm-password"
-                      type="password"
-                      placeholder="••••••••"
-                      required
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="role">Role</Label>
-                    <Select value={selectedRole} onValueChange={setSelectedRole} disabled={isLoadingRoles}>
-                      <SelectTrigger id="role">
-                        <SelectValue placeholder="Select your role" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {isLoadingRoles ? (
-                          <SelectItem value="loading" disabled>
-                            Loading roles...
-                          </SelectItem>
-                        ) : (
-                          roles.map((role) => (
-                            <SelectItem key={role.id} value={role.id.toString()}>
-                              {role.role_name}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button type="submit" className="w-full" disabled={isRegistering}>
-                    {isRegistering ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating Account...
-                      </>
-                    ) : (
-                      <>
-                        <UserPlus className="mr-2 h-4 w-4" />
-                        Create Account
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </CardContent>
-            </TabsContent>
-          </Tabs>
-
-          <CardFooter className="flex justify-center border-t p-4">
-            <p className="text-xs text-muted-foreground text-center max-w-xs">
-              By continuing, you agree to our Terms of Service and Privacy Policy.
-            </p>
-          </CardFooter>
-        </Card>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen w-full">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
       </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background w-full">
+      <Card className="w-full max-w-md shadow-lg border-border">
+        <Tabs defaultValue="login" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="login" id="login-tab" className="text-base font-medium">
+              Login
+            </TabsTrigger>
+            <TabsTrigger value="register" className="text-base font-medium">
+              Register
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Login */}
+          <TabsContent value="login">
+            <CardHeader className="space-y-1">
+              <div className="flex justify-center mb-2 md:hidden">
+                <Lock className="h-12 w-12 text-primary" />
+              </div>
+              <CardTitle className="text-2xl text-center font-bold">Sign In</CardTitle>
+              <CardDescription className="text-center">Access your account by signing in</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="name@example.com"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="password">Password</Label>
+                    <Button variant="link" className="p-0 h-auto text-xs" type="button">
+                      Forgot password?
+                    </Button>
+                  </div>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </div>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Signing In...
+                    </>
+                  ) : (
+                    <>
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Sign In
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </TabsContent>
+
+          {/* Register */}
+          <TabsContent value="register">
+            <CardHeader className="space-y-1">
+              <div className="flex justify-center mb-2 md:hidden">
+                <UserPlus className="h-12 w-12 text-primary" />
+              </div>
+              <CardTitle className="text-2xl text-center font-bold">Create Account</CardTitle>
+              <CardDescription className="text-center">Fill in your information to register</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleRegister} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="register-name">Full Name</Label>
+                  <Input
+                    id="register-name"
+                    placeholder="John Doe"
+                    required
+                    value={registerName}
+                    onChange={(e) => setRegisterName(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="register-email">Email</Label>
+                  <Input
+                    id="register-email"
+                    type="email"
+                    placeholder="name@example.com"
+                    required
+                    value={registerEmail}
+                    onChange={(e) => setRegisterEmail(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="register-password">Password</Label>
+                  <Input
+                    id="register-password"
+                    type="password"
+                    placeholder="••••••••"
+                    required
+                    value={registerPassword}
+                    onChange={(e) => setRegisterPassword(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirm-password">Confirm Password</Label>
+                  <Input
+                    id="confirm-password"
+                    type="password"
+                    placeholder="••••••••"
+                    required
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                </div>
+                {/* <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select value={selectedRole} onValueChange={setSelectedRole} disabled={isLoadingRoles}>
+                    <SelectTrigger id="role">
+                      <SelectValue placeholder="Select your role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {isLoadingRoles ? (
+                        <SelectItem value="loading" disabled>
+                          Loading roles...
+                        </SelectItem>
+                      ) : (
+                        roles.map((role) => (
+                          <SelectItem key={role.id} value={role.id.toString()}>
+                            {role.role_name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div> */}
+                <Button type="submit" className="w-full" disabled={isRegistering}>
+                  {isRegistering ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating Account...
+                    </>
+                  ) : (
+                    <>
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Create Account
+                    </>
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </TabsContent>
+        </Tabs>
+
+        <CardFooter className="flex justify-center border-t p-4">
+          <p className="text-xs text-muted-foreground text-center max-w-xs">
+            By continuing, you agree to our Terms of Service and Privacy Policy.
+          </p>
+        </CardFooter>
+      </Card>
     </div>
   )
 }

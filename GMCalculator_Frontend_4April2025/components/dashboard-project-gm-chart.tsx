@@ -1,160 +1,126 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
-import { Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis, Legend } from "recharts"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useEffect, useState } from "react"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { getToken } from "@/utils/auth"
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
-import { Skeleton } from "@/components/ui/skeleton"
 
 interface ProjectTrendData {
-  project_id: number
-  month: number
-  year: number
-  project_name: string
-  avg_percentage_gross_margin: string
-}
-
-interface ChartData {
-  date: string
-  [projectName: string]: string | number
-}
-
-interface ChartConfig {
-  [key: string]: {
-    label: string
-    color: string
-  }
+  month: string
+  total_revenue: number
+  total_cost: number
+  total_gm: number
 }
 
 interface DashboardProjectGMChartProps {
   deliveryUnit: string
+  month: string
+  financialYear: string // ADD THIS PROP
 }
 
-export function DashboardProjectGMChart({ deliveryUnit }: DashboardProjectGMChartProps) {
-  const [chartData, setChartData] = useState<ChartData[]>([])
+export function DashboardProjectGMChart({ deliveryUnit, month, financialYear }: DashboardProjectGMChartProps) {
+  const [data, setData] = useState<ProjectTrendData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const controller = new AbortController()
-    const signal = controller.signal
-
-    const fetchChartData = async () => {
+    const fetchProjectTrends = async () => {
       setIsLoading(true)
       setError(null)
       try {
         const token = getToken()
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/dashboard/project-trends/${deliveryUnit}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-            signal,
-          },
-        )
-        if (!response.ok) {
-          throw new Error("Failed to fetch project trend data")
+
+        console.log("=== CHART COMPONENT ===")
+        console.log("Chart fetching data with:", { deliveryUnit, month, financialYear })
+
+        // Validate financialYear before making request
+        if (!financialYear || financialYear === "undefined" || financialYear === "") {
+          console.error("Missing or invalid financial year in chart component")
+          setError("Financial year is required")
+          return
         }
-        const data: ProjectTrendData[] = await response.json()
 
-        // Transform the data for the chart
-        const transformedData: ChartData[] = []
-        const projectSet = new Set<string>()
+        // INCLUDE FINANCIAL YEAR IN API CALL
+        const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/interim-dashboard/project-trends?deliveryUnit=${deliveryUnit}&month=${encodeURIComponent(month)}&financialYear=${encodeURIComponent(financialYear)}`
+        console.log("Chart API URL:", apiUrl)
 
-        data.forEach((item) => {
-          const date = `${item.year}-${item.month.toString().padStart(2, "0")}`
-          let dataPoint = transformedData.find((d) => d.date === date)
-          if (!dataPoint) {
-            dataPoint = { date }
-            transformedData.push(dataPoint)
-          }
-          dataPoint[item.project_name] = Number.parseFloat(item.avg_percentage_gross_margin)
-          projectSet.add(item.project_name)
+        const response = await fetch(apiUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         })
 
-        setChartData(transformedData)
+        if (!response.ok) {
+          const errorText = await response.text()
+          console.error("Chart API error:", errorText)
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const trendsData = await response.json()
+        console.log("Chart data received:", trendsData)
+
+        if (Array.isArray(trendsData) && trendsData.length > 0) {
+          setData(trendsData)
+        } else {
+          console.log("No trend data available")
+          setData([])
+        }
       } catch (err) {
-        if (!signal.aborted) {
-          setError("Failed to load project trend data. Please try again later.")
-        }
+        console.error("Error fetching project trends:", err)
+        setError(err instanceof Error ? err.message : "Failed to load chart data")
       } finally {
-        if (!signal.aborted) {
-          setIsLoading(false)
-        }
+        setIsLoading(false)
       }
     }
 
-    fetchChartData()
-
-    return () => {
-      controller.abort()
+    // Only fetch if all required props are available
+    if (deliveryUnit && financialYear && month) {
+      fetchProjectTrends()
+    } else {
+      console.log("Missing required props for chart:", { deliveryUnit, month, financialYear })
+      setIsLoading(false)
     }
-  }, [deliveryUnit])
-
-  const projects = useMemo(() => {
-    return Array.from(new Set(chartData.flatMap((obj) => Object.keys(obj).filter((key) => key !== "date"))))
-  }, [chartData])
-
-  const colors = ["#8884d8", "#82ca9d", "#ffc658", "#ff7300", "#a4de6c", "#d0ed57"]
-
-  const chartConfig: ChartConfig = useMemo(() => {
-    return projects.reduce((acc, project, index) => {
-      acc[project] = {
-        label: project,
-        color: colors[index % colors.length],
-      }
-      return acc
-    }, {} as ChartConfig)
-  }, [projects])
+  }, [deliveryUnit, month, financialYear]) // ADD financialYear TO DEPENDENCIES
 
   if (isLoading) {
     return (
-      <div className="h-[400px] w-full flex items-center justify-center">
-        <Skeleton className="h-full w-full" />
+      <div className="flex items-center justify-center h-full">
+        <div className="text-muted-foreground">Loading chart data...</div>
       </div>
     )
   }
 
   if (error) {
-    return <div className="p-4 text-red-500">{error}</div>
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-red-500">Error: {error}</div>
+      </div>
+    )
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-muted-foreground">No data available for the selected period</div>
+      </div>
+    )
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Project Gross Margin Trends</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ChartContainer config={chartConfig} className="h-[400px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData}>
-              <XAxis
-                dataKey="date"
-                tickFormatter={(value) => {
-                  const [year, month] = value.split("-")
-                  return `${month}/${year.slice(2)}`
-                }}
-              />
-              <YAxis tickFormatter={(value) => `${value}%`} domain={["auto", "auto"]} />
-              <Tooltip content={<ChartTooltipContent />} />
-              <Legend />
-              {projects.map((project) => (
-                <Line
-                  key={project}
-                  type="monotone"
-                  dataKey={project}
-                  stroke={chartConfig[project].color}
-                  name={project}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartContainer>
-      </CardContent>
-    </Card>
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="month" />
+        <YAxis />
+        <Tooltip
+          formatter={(value, name) => {
+            return [`$${Number(value).toLocaleString()}`, name]
+          }}
+        />
+        <Legend />
+        <Line type="monotone" dataKey="total_revenue" stroke="#8884d8" strokeWidth={2} name="Revenue" />
+        <Line type="monotone" dataKey="total_cost" stroke="#82ca9d" strokeWidth={2} name="Cost" />
+        <Line type="monotone" dataKey="total_gm" stroke="#ffc658" strokeWidth={2} name="Gross Margin" />
+      </LineChart>
+    </ResponsiveContainer>
   )
 }

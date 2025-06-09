@@ -326,15 +326,41 @@ exports.updateUSExchangeRate = async (req, res) => {
 async function processDeliveryInvestmentReport(data) {
   let inserted = 0
   let errors = 0
-
-  // Create a transaction to ensure data integrity
   const transaction = await db.sequelize.transaction()
 
   try {
+    const now = new Date()
+    const month = now.getMonth() + 1
+    const year = now.getFullYear()
+
+const existingRows = await db.sequelize.query(
+  `SELECT created_at FROM delivery_investment_report 
+   WHERE MONTH(created_at) = ? AND YEAR(created_at) = ? LIMIT 1`,
+  {
+    replacements: [month, year],
+    type: db.Sequelize.QueryTypes.SELECT,
+    transaction,
+  }
+)
+
+let createdAtToReuse = null
+
+if (existingRows.length > 0) {
+  createdAtToReuse = existingRows[0].created_at
+
+  await db.sequelize.query(
+    `DELETE FROM delivery_investment_report 
+     WHERE MONTH(created_at) = ? AND YEAR(created_at) = ?`,
+    {
+      replacements: [month, year],
+      transaction,
+    }
+  )
+}
+
+
     for (const row of data) {
       try {
-        // Map Excel columns to database fields
-        // Adjust the field names based on your actual Excel column headers
         const record = {
           service_type: row["Service Type"] || null,
           account_name: row["Account Name"] || null,
@@ -351,38 +377,33 @@ async function processDeliveryInvestmentReport(data) {
           technical_involvement: row["Technical Involvement"] || null,
         }
 
-        console.log("Record to insert:", record)
-
-        // Check if project_code is null and log a warning
-        if (!record.project_code) {
-          logger.warn(`Missing project_code for record: ${JSON.stringify(record)}`)
-        }
-
-        // Insert the record into the database
+        const now = new Date()
         await db.sequelize.query(
-          `INSERT INTO delivery_investment_report 
-          (service_type, account_name, type, delivery_unit, project_code, project_name, 
-           engagement_type, staffing_model, employee_id, employee_name, designation, 
-           resource_status, technical_involvement) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          {
-            replacements: [
-              record.service_type,
-              record.account_name,
-              record.type,
-              record.delivery_unit,
-              record.project_code,
-              record.project_name,
-              record.engagement_type,
-              record.staffing_model,
-              record.employee_id,
-              record.employee_name,
-              record.designation,
-              record.resource_status,
-              record.technical_involvement,
+  `INSERT INTO delivery_investment_report 
+   (service_type, account_name, type, delivery_unit, project_code, project_name,
+    engagement_type, staffing_model, employee_id, employee_name, designation,
+    resource_status, technical_involvement, created_at, updated_at) 
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,  // Reduced to 15 placeholders
+  {
+    replacements: [
+      record.service_type,
+      record.account_name,
+      record.type,
+      record.delivery_unit,
+      record.project_code,
+      record.project_name,
+      record.engagement_type,
+      record.staffing_model,
+      record.employee_id,
+      record.employee_name,
+      record.designation,
+      record.resource_status,
+      record.technical_involvement,
+      createdAtToReuse || now,
+              now,
             ],
             transaction,
-          },
+          }
         )
 
         inserted++
@@ -392,17 +413,15 @@ async function processDeliveryInvestmentReport(data) {
       }
     }
 
-    // Commit the transaction if all went well
     await transaction.commit()
-
     return { inserted, errors }
   } catch (error) {
-    // Rollback the transaction if there was an error
     await transaction.rollback()
     logger.error(`Transaction error: ${error.message}`)
     throw error
   }
 }
+
 
 exports.processSalarySheet = async (req, res) => {
   if (!req.file) {
@@ -420,7 +439,6 @@ exports.processSalarySheet = async (req, res) => {
     const filePath = req.file.path
     logger.info(`Processing salary sheet file: ${filePath}`)
 
-    // Read the Excel file
     const workbook = xlsx.readFile(filePath)
     const firstSheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[firstSheetName]
@@ -429,39 +447,51 @@ exports.processSalarySheet = async (req, res) => {
     logger.info(`Found ${data.length} rows in the salary sheet`)
 
     const transaction = await db.sequelize.transaction()
-
     try {
       let inserted = 0
       let errors = 0
 
-      // Clear existing data to avoid primary key conflicts
-      await db.sequelize.query("TRUNCATE TABLE salarySheet", { transaction })
+      const now = new Date()
+      const month = now.getMonth() + 1
+      const year = now.getFullYear()
+
+      const existingRows = await db.sequelize.query(
+        `SELECT created_at FROM salarySheet 
+         WHERE MONTH(created_at) = ? AND YEAR(created_at) = ? LIMIT 1`,
+        {
+          replacements: [month, year],
+          type: db.Sequelize.QueryTypes.SELECT,
+          transaction,
+        }
+      )
+
+      let createdAtToReuse = null
+
+      if (existingRows.length > 0) {
+        createdAtToReuse = existingRows[0].created_at
+
+        await db.sequelize.query(
+          `DELETE FROM salarySheet 
+           WHERE MONTH(created_at) = ? AND YEAR(created_at) = ?`,
+          { replacements: [month, year], transaction }
+        )
+      }
 
       for (const row of data) {
         try {
-          // Parse date string in M/D/YYYY or MM/DD/YYYY format
           let dateOfJoining = null
           const doj = row["Date Of Joining"]
+
           if (doj) {
             if (typeof doj === "number") {
-              // Excel serial date to JS date
-              const jsDate = new Date(Math.round((doj - 25569) * 86400 * 1000))
-              dateOfJoining = jsDate.toISOString().slice(0, 10) // YYYY-MM-DD
+              dateOfJoining = new Date((doj - 25569) * 86400 * 1000).toISOString().slice(0, 10)
             } else if (typeof doj === "string" && doj.includes("/")) {
-              // Parse M/D/YYYY or MM/DD/YYYY
               const parts = doj.split("/")
               if (parts.length === 3) {
-                let [month, day, year] = parts
-                // Handle 2-digit years if present
-                if (year.length === 2) year = "20" + year
-                const mm = month.padStart(2, "0")
-                const dd = day.padStart(2, "0")
-                dateOfJoining = `${year}-${mm}-${dd}`
-              } else {
-                logger.warn(`Unrecognized date string format: ${doj}`)
+                let [monthStr, day, yearStr] = parts
+                if (yearStr.length === 2) yearStr = "20" + yearStr
+                dateOfJoining = `${yearStr}-${monthStr.padStart(2, "0")}-${day.padStart(2, "0")}`
               }
-            } else {
-              logger.warn(`Unrecognized date value: ${doj} (type: ${typeof doj})`)
             }
           }
 
@@ -473,20 +503,19 @@ exports.processSalarySheet = async (req, res) => {
             Grade: row["Grade"] || null,
             CurrentDepartment: row["Current Department"] || null,
             CTC: row["CTC"] || null,
+            AdditionalCostEmployee: row["Additional cost"] || 0.0,
           }
 
-          // Validate required fields
           if (!record.EmployeeCode || !record.EmployeeName || !record.DateOfJoining) {
             logger.warn(`Missing required fields for record: ${JSON.stringify(record)}`)
             errors++
             continue
           }
 
-          // Insert the record into the database
           await db.sequelize.query(
             `INSERT INTO salarySheet 
-              (EmployeeCode, EmployeeName, DateOfJoining, CurrentDesignation, Grade, CurrentDepartment, CTC) 
-              VALUES (?, ?, ?, ?, ?, ?, ?)`,
+            (EmployeeCode, EmployeeName, DateOfJoining, CurrentDesignation, Grade, CurrentDepartment, CTC, AdditionalCostEmployee, created_at, updated_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             {
               replacements: [
                 record.EmployeeCode,
@@ -496,9 +525,12 @@ exports.processSalarySheet = async (req, res) => {
                 record.Grade,
                 record.CurrentDepartment,
                 record.CTC,
+                record.AdditionalCostEmployee,
+                createdAtToReuse || now,
+                now,
               ],
               transaction,
-            },
+            }
           )
 
           inserted++
@@ -508,18 +540,15 @@ exports.processSalarySheet = async (req, res) => {
         }
       }
 
-      // Commit the transaction if all went well
       await transaction.commit()
 
-      // Return the actual file path with the filename that includes the timestamp
       return res.status(200).json({
         message: "Salary sheet processed successfully",
         results: { inserted, errors },
-        filePath: filePath, // Return the actual file path with timestamp
-        fileName: req.file.filename, // Return the actual filename with timestamp
+        filePath,
+        fileName: req.file.filename,
       })
     } catch (error) {
-      // Rollback the transaction if there was an error
       await transaction.rollback()
       logger.error(`Transaction error: ${error.message}`)
       return res.status(500).json({ error: "Error processing file", details: error.message })
@@ -531,6 +560,7 @@ exports.processSalarySheet = async (req, res) => {
 }
 
 
+
 exports.processRevenueSheet = async (req, res) => {
   if (!req.file) {
     logger.error("No file uploaded")
@@ -539,7 +569,7 @@ exports.processRevenueSheet = async (req, res) => {
 
   const allowedTypes = [
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-excel"
+    "application/vnd.ms-excel",
   ]
   if (!allowedTypes.includes(req.file.mimetype)) {
     logger.error(`Invalid file type: ${req.file.mimetype}`)
@@ -550,7 +580,6 @@ exports.processRevenueSheet = async (req, res) => {
     const filePath = req.file.path
     logger.info(`Processing revenue sheet file: ${filePath}`)
 
-    // Read the Excel file
     const workbook = xlsx.readFile(filePath)
     const firstSheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[firstSheetName]
@@ -559,13 +588,35 @@ exports.processRevenueSheet = async (req, res) => {
     logger.info(`Found ${data.length} rows in the revenue sheet`)
 
     const transaction = await db.sequelize.transaction()
-
     try {
       let inserted = 0
       let errors = 0
 
-      // Optional: Clear existing data if needed
-      // await db.sequelize.query("TRUNCATE TABLE revenue", { transaction })
+      const now = new Date()
+      const month = now.getMonth() + 1
+      const year = now.getFullYear()
+
+      const existingRows = await db.sequelize.query(
+        `SELECT created_at FROM revenue 
+         WHERE MONTH(created_at) = ? AND YEAR(created_at) = ? LIMIT 1`,
+        {
+          replacements: [month, year],
+          type: db.Sequelize.QueryTypes.SELECT,
+          transaction,
+        }
+      )
+
+      let createdAtToReuse = null
+
+      if (existingRows.length > 0) {
+        createdAtToReuse = existingRows[0].created_at
+
+        await db.sequelize.query(
+          `DELETE FROM revenue 
+           WHERE MONTH(created_at) = ? AND YEAR(created_at) = ?`,
+          { replacements: [month, year], transaction }
+        )
+      }
 
       for (const row of data) {
         try {
@@ -578,7 +629,6 @@ exports.processRevenueSheet = async (req, res) => {
             revenue: row["Revenue"] ? Number(String(row["Revenue"]).replace(/,/g, "")) : null,
           }
 
-          // Validate required fields
           if (!record.project_id || !record.project_name) {
             logger.warn(`Missing required fields for record: ${JSON.stringify(record)}`)
             errors++
@@ -587,8 +637,8 @@ exports.processRevenueSheet = async (req, res) => {
 
           await db.sequelize.query(
             `INSERT INTO revenue 
-              (service_type, du, project_id, project_name, account_name, revenue) 
-              VALUES (?, ?, ?, ?, ?, ?)`,
+            (service_type, du, project_id, project_name, account_name, revenue, created_at, updated_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             {
               replacements: [
                 record.service_type,
@@ -597,6 +647,8 @@ exports.processRevenueSheet = async (req, res) => {
                 record.project_name,
                 record.account_name,
                 record.revenue,
+                createdAtToReuse || now,
+                now,
               ],
               transaction,
             }
@@ -614,7 +666,7 @@ exports.processRevenueSheet = async (req, res) => {
       return res.status(200).json({
         message: "Revenue sheet processed successfully",
         results: { inserted, errors },
-        filePath: filePath,
+        filePath,
         fileName: req.file.filename,
       })
     } catch (error) {
@@ -629,37 +681,51 @@ exports.processRevenueSheet = async (req, res) => {
 }
 
 
+
+// Updated monthlyUploadController.js to use month_year instead of Month
+
 exports.calculateInterimCost = async (req, res) => {
   try {
-    // Get current month name (e.g., 'April')
     const now = new Date();
-    const monthName = now.toLocaleString("en-US", { month: "long" });
-
-    // Insert data into interimcostcalculation with current month
-    const [result] = await db.sequelize.query(
-      `INSERT INTO interimcostcalculation 
-        (ProjectId, EmpId, TechnicalInvolvement, Salary, AdditionalCost, Month)
-      SELECT 
+    const currentMonth = now.getMonth() + 1; // 1-based
+    const currentYear = now.getFullYear();
+ 
+    // Calculate previous month/year (e.g., March 2025 if today is April 2025)
+    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+    const monthYear = `${String(prevMonth).padStart(2, '0')}/${prevYear}`; // "03/2025"
+ 
+    // Check if data already exists for the previous month
+    const [existingRows] = await db.sequelize.query(
+      `SELECT COUNT(*) as count FROM interimcostcalculation WHERE month_year = ?`,
+      { replacements: [monthYear], type: db.Sequelize.QueryTypes.SELECT }
+    );
+ 
+    if (existingRows.count > 0) {
+      return res.status(409).json({ error: "Interim cost data already exists for this month." });
+    }
+ 
+    // Insert data filtered by current month (April 2025) but tagged as previous month (March 2025)
+    await db.sequelize.query(
+      `INSERT INTO interimcostcalculation
+        (ProjectId, EmpId, TechnicalInvolvement, Salary, AdditionalCost, month_year)
+      SELECT DISTINCT
         d.project_code AS ProjectId,
         d.employee_id AS EmpId,
         CAST(d.technical_involvement AS DECIMAL(3,2)) AS TechnicalInvolvement,
-ROUND(
-          ((CAST(s.CTC AS DECIMAL(10,2))) / 12) / (SELECT rate FROM usexchangerate ORDER BY updatedat DESC LIMIT 1) * CAST(d.technical_involvement AS DECIMAL(3,2)), 
-          2
-        ) AS Salary,
-        COALESCE((SELECT SUM(ac.cost) FROM additionalcosts ac), 0.00) AS AdditionalCost,
-        :monthName AS Month
-      FROM 
-        delivery_investment_report d
-      JOIN 
-        salarySheet s 
-        ON d.employee_id = s.EmployeeCode;`,
+        ROUND((s.CTC / 12 + s.AdditionalCostEmployee) / exchange_rate.rate * d.technical_involvement, 2) AS Salary,
+        COALESCE((SELECT SUM(cost) FROM additionalcosts), 0.00) AS AdditionalCost,
+        :monthYear AS month_year
+      FROM delivery_investment_report d
+      JOIN salarySheet s ON d.employee_id = s.EmployeeCode
+      JOIN (SELECT rate FROM usexchangerate ORDER BY updatedat DESC LIMIT 1) exchange_rate
+      WHERE MONTH(d.created_at) = :currentMonth AND YEAR(d.created_at) = :currentYear`,
       {
-        replacements: { monthName },
+        replacements: { monthYear, currentMonth, currentYear },
         type: db.Sequelize.QueryTypes.INSERT,
       }
     );
-
+ 
     res.status(201).json({ message: "Interim cost calculation completed successfully." });
   } catch (error) {
     console.error("Error calculating interim cost:", error.message);
@@ -669,36 +735,52 @@ ROUND(
 
 exports.calculateInterimProjectGM = async (req, res) => {
   try {
-    // Get current month name (e.g., 'April')
     const now = new Date();
-    const monthName = now.toLocaleString("en-US", { month: "long" });
-
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+ 
+    // Previous month/year logic
+    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
+    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
+    const monthYear = `${String(prevMonth).padStart(2, '0')}/${prevYear}`;
+ 
+    // Check for existing data
+    const [existingRows] = await db.sequelize.query(
+      `SELECT COUNT(*) as count FROM interimprojectgm WHERE month_year = ?`,
+      { replacements: [monthYear], type: db.Sequelize.QueryTypes.SELECT }
+    );
+ 
+    if (existingRows.count > 0) {
+      return res.status(409).json({ error: "Interim Project GM data already exists for this month." });
+    }
+ 
+    // Insert data (filtered by current upload month, tagged as previous month)
     await db.sequelize.query(
-      `INSERT INTO interimprojectgm (ProjectId, Revenue, Cost, Month)
+      `INSERT INTO interimprojectgm (ProjectId, Revenue, Cost, month_year)
        SELECT 
          i.ProjectId, 
          r.revenue AS Revenue,
-         SUM(i.TotalCost) AS Cost,
-         :monthName AS Month
-       FROM 
-         interimcostcalculation i
-       JOIN 
-         revenue r ON i.ProjectId = r.project_id
-       WHERE i.Month = :monthName
-       GROUP BY 
-         i.ProjectId, r.revenue;`,
-      { 
-        replacements: { monthName },
-        type: db.Sequelize.QueryTypes.INSERT 
+         SUM(i.Salary + i.AdditionalCost) AS Cost,
+         :monthYear AS month_year
+       FROM interimcostcalculation i
+       JOIN revenue r ON i.ProjectId = r.project_id
+       WHERE i.month_year = :monthYear
+         AND MONTH(r.created_at) = :currentMonth AND YEAR(r.created_at) = :currentYear
+       GROUP BY i.ProjectId, r.revenue`,
+      {
+        replacements: { monthYear, currentMonth, currentYear },
+        type: db.Sequelize.QueryTypes.INSERT,
       }
     );
-
+ 
     res.status(201).json({ message: "Interim Project GM calculation completed successfully." });
   } catch (error) {
     console.error("Error calculating interim project GM:", error.message);
     res.status(500).json({ error: "Failed to calculate interim project GM", details: error.message });
   }
 };
+ 
+
 
 exports.getAllInterimProjectGM = async (req, res) => {
   try {
