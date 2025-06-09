@@ -11,4 +11,7 @@ router.delete("/:id", authenticateToken, employeeController.deleteEmployee)
 router.get("/role/dm", authenticateToken, employeeController.getDMs)
 router.get("/role/dh", authenticateToken, employeeController.getDHs)
 
+// Admin-only route to create employee
+router.post("/admin/create", authenticateToken, employeeController.createEmployeeByAdmin)
+
 module.exports = router

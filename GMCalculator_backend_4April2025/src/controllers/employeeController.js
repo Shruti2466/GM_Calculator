@@ -78,6 +78,59 @@ exports.deleteEmployee = async (req, res) => {
   }
 }
 
+// Create a new employee (Admin only)
+exports.createEmployeeByAdmin = async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.user.role !== "Admin") {
+      return res.status(403).json({ error: "Access denied. Admin privileges required." })
+    }
+
+    const { employee_id, employee_email, employee_name, role_id } = req.body
+
+    // Validate required fields
+    if (!employee_id || !employee_email || !employee_name || !role_id) {
+      return res.status(400).json({ error: "All fields are required" })
+    }
+
+    // Check if employee_id already exists
+    const existingEmployee = await db.Employee.findOne({ where: { employee_id } })
+    if (existingEmployee) {
+      return res.status(400).json({ error: "Employee ID already exists" })
+    }
+
+    // Check if email already exists
+    const existingEmail = await db.Employee.findOne({ where: { employee_email } })
+    if (existingEmail) {
+      return res.status(400).json({ error: "Email already exists" })
+    }
+
+    // Validate role_id exists
+    const role = await db.Role.findByPk(role_id)
+    if (!role) {
+      return res.status(400).json({ error: "Invalid role selected" })
+    }
+
+    const newEmployee = await db.Employee.create({
+      employee_id,
+      employee_email,
+      employee_name,
+      role_id,
+      created_at: moment().format(),
+      updated_at: moment().format(),
+    })
+
+    logger.info(`Admin ${req.user.email} created new employee: ${employee_email}`)
+    res.status(201).json({
+      message: "Employee created successfully",
+      employee: newEmployee,
+    })
+  } catch (err) {
+    logger.error(`Error creating employee: ${err.message}`)
+    res.status(500).json({ error: err.message })
+  }
+}
+
 // Get list of employees with role DM (role_id = 1)
 exports.getDMs = async (req, res) => {
   try {

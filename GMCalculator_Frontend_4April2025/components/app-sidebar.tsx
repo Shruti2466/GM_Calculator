@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { LayoutDashboard, FolderKanban, LogOut, FileText, FileUp } from "lucide-react"
+import { LayoutDashboard, FolderKanban, LogOut, FileUp, UserPlus } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -15,7 +15,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { getEmail, removeAuth, getRole } from "@/utils/auth"
+import { removeAuth, getRole } from "@/utils/auth"
 
 export function AppSidebar() {
   const pathname = usePathname()
@@ -39,25 +39,25 @@ export function AppSidebar() {
       icon: LayoutDashboard,
     },
     {
-      title: "Projects", 
+      title: "Projects",
       href: "/projects",
       icon: FolderKanban,
     },
     {
       title: "Upload Monthly Data",
-      href: "/upload-monthly-data", 
+      href: "/upload-monthly-data",
       icon: FileUp,
     },
   ]
 
-  // Add Audit Trail for Admin users
-//   if (userRole === "Admin") {
-//     navItems.push({
-//       title: "Audit Trail",
-//       href: "/audit-trail",
-//       icon: FileText,
-//     })
-//   }
+  // Add User Management for Admin users
+  if (userRole === "Admin") {
+    navItems.push({
+      title: "Add User",
+      href: "/add-user",
+      icon: UserPlus,
+    })
+  }
 
   return (
     <Sidebar className="w-[25vw] min-w-[180px] max-w-[260px]">
@@ -73,11 +73,7 @@ export function AppSidebar() {
             <SidebarMenu className="gap-1">
               {navItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.href}
-                    className="px-3 py-2 h-9"
-                  >
+                  <SidebarMenuButton asChild isActive={pathname === item.href} className="px-3 py-2 h-9">
                     <a href={item.href}>
                       <item.icon className="h-4 w-4" />
                       <span className="text-sm">{item.title}</span>
