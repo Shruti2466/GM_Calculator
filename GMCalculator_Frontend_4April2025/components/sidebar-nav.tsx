@@ -80,23 +80,6 @@ export function SidebarNav() {
       )}
     >
       <div className="flex flex-col h-full py-4">
-        {/* User profile section */}
-        {/* <div className="px-3 mb-4">
-          <div className="flex items-center space-x-3">
-            <Avatar className="h-10 w-10 shrink-0">
-              <AvatarFallback className="bg-primary text-primary-foreground">{getInitials(userName)}</AvatarFallback>
-            </Avatar>
-            {isOpen && (
-              <div className="space-y-1 overflow-hidden">
-                <p className="text-sm font-medium leading-none truncate">{userName}</p>
-                <p className="text-xs text-muted-foreground truncate">{userRole}</p>
-              </div>
-            )}
-          </div>
-        </div> */}
-
-        {/* <Separator className="mb-4" /> */}
-
         {/* Navigation items */}
         <div className="space-y-1 px-2 flex-1">
           <TooltipProvider delayDuration={0}>

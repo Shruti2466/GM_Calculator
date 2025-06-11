@@ -11,6 +11,7 @@ const employeeRoutes = require("./routes/employeeRoutes")
 const roleRoutes = require("./routes/roleRoutes")
 const logger = require("./logger")
 const monthlyUploadRoutes = require('./routes/monthlyUploadRoutes');
+const interimDashboardRoutes = require("./routes/interimDashboardRoutes") // Add this line
 
 
 
@@ -30,6 +31,7 @@ app.use("/uploads", express.static("uploads"))
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 
 app.use('/api/upload/monthly-data', monthlyUploadRoutes);
+app.use("/api/interim-dashboard", interimDashboardRoutes) // Add this line
 
 db.sequelize.sync().then(() => {
   app.listen(process.env.PORT || 3001, () => {

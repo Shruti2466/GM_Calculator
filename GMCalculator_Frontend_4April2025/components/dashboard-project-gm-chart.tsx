@@ -13,11 +13,11 @@ interface ProjectTrendData {
 
 interface DashboardProjectGMChartProps {
   deliveryUnit: string
-  month: string
-  financialYear: string // ADD THIS PROP
+  financialYear?: string
+  month?: string
 }
 
-export function DashboardProjectGMChart({ deliveryUnit, month, financialYear }: DashboardProjectGMChartProps) {
+export function DashboardProjectGMChart({ deliveryUnit, financialYear, month }: DashboardProjectGMChartProps) {
   const [data, setData] = useState<ProjectTrendData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -103,6 +103,15 @@ export function DashboardProjectGMChart({ deliveryUnit, month, financialYear }: 
         <div className="text-muted-foreground">No data available for the selected period</div>
       </div>
     )
+  }
+
+  // Helper function to get display text for chart title
+  const getChartTitle = () => {
+    if (month === "YTD") {
+      // The parent component will determine if it's "Year To Date" or "All Months"
+      return `Project trends for FY ${financialYear}`
+    }
+    return `Project trends for ${month}/${financialYear?.split('-')[0]}`
   }
 
   return (

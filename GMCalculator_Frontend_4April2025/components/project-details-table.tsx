@@ -115,12 +115,36 @@ export function ProjectDetailsTable({ deliveryUnit, month, financialYear }: Proj
     return numValue;
   }
 
+  // Helper function to get current financial year
+  const getCurrentFinancialYear = () => {
+    const now = new Date()
+    const currentMonth = now.getMonth() + 1
+    const currentYear = now.getFullYear()
+    
+    if (currentMonth >= 4) {
+      return `${currentYear}-${(currentYear + 1).toString().slice(-2)}`
+    } else {
+      return `${currentYear - 1}-${currentYear.toString().slice(-2)}`
+    }
+  }
+
+  // Helper function to get YTD display text
+  const getYTDDisplayText = () => {
+    const currentFY = getCurrentFinancialYear()
+    if (financialYear === currentFY) {
+      return "Year To Date"
+    } else {
+      return "All Months"
+    }
+  }
+
+  // Update the export filename generation
   const exportToExcel = async () => {
     if (data.length === 0) return;
 
     setIsExporting(true);
     try {
-      // Prepare data for Excel - REMOVED Period column
+      // Prepare data for Excel
       const excelData = data.map(project => ({
         'Project Name': project.project_name,
         'Project Code': project.project_code,
@@ -138,7 +162,7 @@ export function ProjectDetailsTable({ deliveryUnit, month, financialYear }: Proj
       const workbook = XLSX.utils.book_new();
       const worksheet = XLSX.utils.json_to_sheet(excelData);
 
-      // Set column widths - REMOVED Period column width
+      // Set column widths
       const columnWidths = [
         { wch: 25 }, // Project Name
         { wch: 15 }, // Project Code
@@ -156,11 +180,11 @@ export function ProjectDetailsTable({ deliveryUnit, month, financialYear }: Proj
       // Add worksheet to workbook
       XLSX.utils.book_append_sheet(workbook, worksheet, 'Project Details');
 
-      // Generate filename with financial year
+      // Generate filename with appropriate text
       const timestamp = new Date().toISOString().split('T')[0];
       const deliveryUnitText = deliveryUnit === 'all' ? 'All-Units' : deliveryUnit;
-      const monthText = month === 'all' ? 'All-Months' : month.replace('/', '-');
-      const fyText = financialYear === 'all' ? 'All-FY' : `FY${financialYear}`;
+      const monthText = month === 'YTD' ? getYTDDisplayText().replace(' ', '-') : month.replace('/', '-');
+      const fyText = `FY${financialYear}`;
       const filename = `Project-Details_${deliveryUnitText}_${monthText}_${fyText}_${timestamp}.xlsx`;
 
       // Save file

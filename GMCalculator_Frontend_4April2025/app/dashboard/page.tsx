@@ -21,6 +21,7 @@ interface OrganizationMetrics {
 interface AvailableMonthsResponse {
   months: string[]
   financialYears: string[]
+  currentFinancialYear: string // Add this to track current FY
 }
 
 export default function DashboardPage() {
@@ -41,6 +42,7 @@ export default function DashboardPage() {
   const [deliveryUnits, setDeliveryUnits] = useState<string[]>([])
   const [availableMonths, setAvailableMonths] = useState<string[]>([])
   const [availableFinancialYears, setAvailableFinancialYears] = useState<string[]>([])
+  const [currentFinancialYear, setCurrentFinancialYear] = useState<string>("") // Track current FY
   const [isDUListLoading, setIsDUListLoading] = useState(true)
   const [isMonthsLoading, setIsMonthsLoading] = useState(true)
   const [duListError, setDUListError] = useState<string | null>(null)
@@ -71,6 +73,15 @@ export default function DashboardPage() {
     if (selectedFinancialYear === "") return "Select Financial Year First"
     if (isMonthsLoading) return "Loading..."
     return "Select Month"
+  }
+
+  // Helper function to get YTD display text based on financial year
+  const getYTDDisplayText = (financialYear: string) => {
+    if (financialYear === currentFinancialYear) {
+      return "Year To Date"
+    } else {
+      return "All Months"
+    }
   }
 
   // Handle financial year change with validation
@@ -133,9 +144,11 @@ export default function DashboardPage() {
         setAvailableMonths(["YTD", ...data.months])
         // REMOVE "all" from financial years - only include specific years
         setAvailableFinancialYears(data.financialYears || [])
+        // Set current financial year
+        setCurrentFinancialYear(data.currentFinancialYear || getCurrentFinancialYear())
 
         // Set default to current financial year
-        const currentFY = getCurrentFinancialYear()
+        const currentFY = data.currentFinancialYear || getCurrentFinancialYear()
         if (data.financialYears && data.financialYears.includes(currentFY)) {
           setSelectedFinancialYear(currentFY)
           setSelectedMonth("YTD") // Default to YTD for current financial year
@@ -215,7 +228,10 @@ export default function DashboardPage() {
   }
 
   const getMonthName = (monthNumber: string) => {
-    if (monthNumber === "YTD") return "Year To Date"
+    if (monthNumber === "YTD") {
+      // Return different text based on whether it's current FY or not
+      return getYTDDisplayText(selectedFinancialYear)
+    }
     const months = [
       "January", "February", "March", "April", "May", "June",
       "July", "August", "September", "October", "November", "December",
@@ -228,7 +244,11 @@ export default function DashboardPage() {
       return "Please select a financial year"
     }
     if (selectedMonth === "YTD") {
-      return `YTD FY ${selectedFinancialYear}`
+      if (selectedFinancialYear === currentFinancialYear) {
+        return `YTD FY ${selectedFinancialYear}`
+      } else {
+        return `All Months FY ${selectedFinancialYear}`
+      }
     } else {
       return `${getMonthName(selectedMonth)} FY ${selectedFinancialYear}`
     }
@@ -303,7 +323,7 @@ export default function DashboardPage() {
                 ) : (
                   availableMonths.map((month) => (
                     <SelectItem key={month} value={month}>
-                      {getMonthName(month)}
+                      {month === "YTD" ? getYTDDisplayText(selectedFinancialYear) : getMonthName(month)}
                     </SelectItem>
                   ))
                 )}
@@ -376,11 +396,11 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-red-500 shadow-sm hover:shadow-md transition-shadow">
+              <Card className="border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">GM Percentage</CardTitle>
-                  <div className="h-8 w-8 rounded-full bg-red-100 flex items-center justify-center">
-                    <Percent className="h-4 w-4 text-red-600" />
+                  <CardTitle className="text-sm font-medium text-muted-foreground">Avg Gross Margin %</CardTitle>
+                  <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
+                    <Percent className="h-4 w-4 text-purple-600" />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -401,11 +421,11 @@ export default function DashboardPage() {
                 </CardContent>
               </Card>
 
-              <Card className="border-l-4 border-l-purple-500 shadow-sm hover:shadow-md transition-shadow">
+              <Card className="border-l-4 border-l-orange-500 shadow-sm hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
                   <CardTitle className="text-sm font-medium text-muted-foreground">Total Revenue</CardTitle>
-                  <div className="h-8 w-8 rounded-full bg-purple-100 flex items-center justify-center">
-                    <Activity className="h-4 w-4 text-purple-600" />
+                  <div className="h-8 w-8 rounded-full bg-orange-100 flex items-center justify-center">
+                    <Activity className="h-4 w-4 text-orange-600" />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
@@ -427,15 +447,28 @@ export default function DashboardPage() {
               </Card>
             </div>
 
-            {/* Your existing chart and table components... */}
-            {/* Update the chart and table components to pass financialYear instead of year */}
-            {selectedFinancialYear !== "" && (
+            {error ? (
+              <Alert variant="destructive">
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            ) : selectedFinancialYear === "" ? (
+              <Alert>
+                <AlertTitle>Getting Started</AlertTitle>
+                <AlertDescription>
+                  Please select a financial year from the dropdown above to load your dashboard data. Financial years run from April 1st to March 31st. You can then optionally select a specific month or view all data for the selected financial year.
+                </AlertDescription>
+              </Alert>
+            ) : (
               <div className="space-y-6">
+                {/* Chart Section */}
                 <Card className="shadow-sm">
                   <CardHeader className="space-y-2 pb-6">
                     <CardTitle className="text-xl font-semibold">Project Gross Margins</CardTitle>
                     <CardDescription className="text-base">
-                      Gross margin analysis for {getDisplayPeriod()}
+                      {selectedMonth === "YTD"
+                        ? `${getYTDDisplayText(selectedFinancialYear)} analysis of gross margin percentages across all projects for FY ${selectedFinancialYear}`
+                        : `Gross margin analysis for ${getDisplayPeriod()}`}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pt-0">
@@ -447,19 +480,20 @@ export default function DashboardPage() {
                       ) : (
                         <DashboardProjectGMChart
                           deliveryUnit={selectedDeliveryUnit}
-                          month={selectedMonth}
                           financialYear={selectedFinancialYear}
+                          month={selectedMonth}
                         />
                       )}
                     </div>
                   </CardContent>
                 </Card>
 
+                {/* Table Section */}
                 <div className="pb-6">
                   <ProjectDetailsTable
                     deliveryUnit={selectedDeliveryUnit}
-                    month={selectedMonth}
                     financialYear={selectedFinancialYear}
+                    month={selectedMonth}
                   />
                 </div>
               </div>

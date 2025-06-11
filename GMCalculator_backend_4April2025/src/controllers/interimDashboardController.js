@@ -397,6 +397,19 @@ const getProjectDetailsTable = async (req, res) => {
   }
 }
 
+// Helper function to get current financial year
+const getCurrentFinancialYear = () => {
+  const now = new Date()
+  const currentMonth = now.getMonth() + 1
+  const currentYear = now.getFullYear()
+  
+  if (currentMonth >= 4) {
+    return `${currentYear}-${(currentYear + 1).toString().slice(-2)}`
+  } else {
+    return `${currentYear - 1}-${currentYear.toString().slice(-2)}`
+  }
+}
+
 // Updated getAvailableMonths to return financial years
 const getAvailableMonths = async (req, res) => {
   try {
@@ -433,9 +446,16 @@ const getAvailableMonths = async (req, res) => {
       return bStart - aStart; // Most recent first
     });
 
-    console.log("Processed months and financial years:", { months, financialYears })
+    // Get current financial year
+    const currentFY = getCurrentFinancialYear()
 
-    res.json({ months, financialYears })
+    console.log("Processed months and financial years:", { months, financialYears, currentFY })
+
+    res.json({ 
+      months, 
+      financialYears,
+      currentFinancialYear: currentFY // Send current FY to frontend
+    })
   } catch (error) {
     console.error("Error in getAvailableMonths:", error)
     res.status(500).json({
@@ -443,6 +463,7 @@ const getAvailableMonths = async (req, res) => {
       details: error.message,
       months: [],
       financialYears: [],
+      currentFinancialYear: getCurrentFinancialYear()
     })
   }
 }
