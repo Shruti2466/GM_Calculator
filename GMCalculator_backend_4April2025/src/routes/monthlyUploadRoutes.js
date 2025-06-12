@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const { uploadMonthlyData, trackMonthlyUpload, getAllUploadedSheets, getAdditionalCosts, addAdditionalCost, getUSExchangeRate, updateUSExchangeRate, downloadFile, processSalarySheet, processRevenueSheet, calculateInterimCost, calculateInterimProjectGM, getAllInterimProjectGM} = require("../controllers/monthlyUploadController"); // Import trackMonthlyUpload
+const { uploadMonthlyData, trackMonthlyUpload, getAllUploadedSheets, getAdditionalCosts, addAdditionalCost, getUSExchangeRate, updateUSExchangeRate, downloadFile, processSalarySheet, processRevenueSheet, calculateInterimCost, calculateInterimProjectGM, getAllInterimProjectGM, updateAdditionalCost} = require("../controllers/monthlyUploadController"); // Import trackMonthlyUpload
 const authenticateToken = require("../middlewares/authMiddleware");
 const multer = require("multer");
 const path = require("path");
@@ -33,6 +33,8 @@ router.get("/uploaded-sheets", getAllUploadedSheets);
 router.get("/additional-costs", getAdditionalCosts);
 
 router.post("/additional-costs", authenticateToken, addAdditionalCost);
+
+router.put("/additional-costs/:id", authenticateToken, updateAdditionalCost);
 
 router.get("/exchange-rate/usd", getUSExchangeRate);
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { DashboardProjectGMChart } from "@/components/dashboard-project-gm-chart"
 import { ProjectDetailsTable } from "@/components/project-details-table"
@@ -21,11 +21,10 @@ interface OrganizationMetrics {
 interface AvailableMonthsResponse {
   months: string[]
   financialYears: string[]
-  currentFinancialYear: string // Add this to track current FY
+  currentFinancialYear: string
 }
 
 export default function DashboardPage() {
-  // Check authentication first
   useEffect(() => {
     const token = getToken()
     if (!token) {
@@ -34,15 +33,15 @@ export default function DashboardPage() {
   }, [])
 
   const [selectedDeliveryUnit, setSelectedDeliveryUnit] = useState<string>("all")
-  const [selectedMonth, setSelectedMonth] = useState<string>("YTD") // Default to YTD
-  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("") // Financial year instead of year
+  const [selectedMonth, setSelectedMonth] = useState<string>("YTD")
+  const [selectedFinancialYear, setSelectedFinancialYear] = useState<string>("")
   const [metrics, setMetrics] = useState<OrganizationMetrics | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [deliveryUnits, setDeliveryUnits] = useState<string[]>([])
   const [availableMonths, setAvailableMonths] = useState<string[]>([])
   const [availableFinancialYears, setAvailableFinancialYears] = useState<string[]>([])
-  const [currentFinancialYear, setCurrentFinancialYear] = useState<string>("") // Track current FY
+  const [currentFinancialYear, setCurrentFinancialYear] = useState<string>("")
   const [isDUListLoading, setIsDUListLoading] = useState(true)
   const [isMonthsLoading, setIsMonthsLoading] = useState(true)
   const [duListError, setDUListError] = useState<string | null>(null)
@@ -50,12 +49,11 @@ export default function DashboardPage() {
   const [employeeName, setEmployeeName] = useState<string>("")
   const [employeeRole, setEmployeeRole] = useState<string>("")
 
-  // Helper function to get current financial year
   const getCurrentFinancialYear = () => {
     const now = new Date()
     const currentMonth = now.getMonth() + 1
     const currentYear = now.getFullYear()
-    
+
     if (currentMonth >= 4) {
       return `${currentYear}-${(currentYear + 1).toString().slice(-2)}`
     } else {
@@ -63,19 +61,16 @@ export default function DashboardPage() {
     }
   }
 
-  // Helper function to check if month should be disabled
   const isMonthDisabled = () => {
     return selectedFinancialYear === "" || isMonthsLoading
   }
 
-  // Helper function to get month placeholder text
   const getMonthPlaceholder = () => {
     if (selectedFinancialYear === "") return "Select Financial Year First"
     if (isMonthsLoading) return "Loading..."
     return "Select Month"
   }
 
-  // Helper function to get YTD display text based on financial year
   const getYTDDisplayText = (financialYear: string) => {
     if (financialYear === currentFinancialYear) {
       return "Year To Date"
@@ -84,140 +79,115 @@ export default function DashboardPage() {
     }
   }
 
-  // Handle financial year change with validation
   const handleFinancialYearChange = (financialYear: string) => {
     setSelectedFinancialYear(financialYear)
-    // Default to YTD when a financial year is selected
     setSelectedMonth("YTD")
   }
 
-  // Handle month change with validation
   const handleMonthChange = (month: string) => {
-    // Only allow month change if a valid financial year is selected
     if (selectedFinancialYear !== "") {
       setSelectedMonth(month)
     }
   }
 
-  useEffect(() => {
-    const fetchDeliveryUnits = async () => {
-      setIsDUListLoading(true)
-      setDUListError(null)
-      try {
-        const token = getToken()
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/dashboard/dulist`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        if (!response.ok) {
-          throw new Error("Failed to fetch delivery units")
-        }
-        const data = await response.json()
-        setDeliveryUnits(["all", ...data])
-      } catch (err) {
-        setDUListError("Failed to load delivery units. Please try again later.")
-        console.error("Error fetching delivery units:", err)
-      } finally {
-        setIsDUListLoading(false)
+  const fetchDeliveryUnits = useCallback(async () => {
+    setIsDUListLoading(true)
+    setDUListError(null)
+    try {
+      const token = getToken()
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/dashboard/dulist`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (!response.ok) {
+        throw new Error("Failed to fetch delivery units")
       }
+      const data = await response.json()
+      setDeliveryUnits(["all", ...data])
+    } catch (err) {
+      setDUListError("Failed to load delivery units. Please try again later.")
+    } finally {
+      setIsDUListLoading(false)
     }
+  }, [])
 
-    const fetchAvailableMonths = async () => {
-      setIsMonthsLoading(true)
-      setMonthsError(null)
-      try {
-        const token = getToken()
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/interim-dashboard/available-months`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-        if (!response.ok) {
-          throw new Error("Failed to fetch available months")
-        }
-        const data: AvailableMonthsResponse = await response.json()
-
-        console.log("Available months data:", data)
-
-        // REMOVE "all" from months - only include YTD and specific months
-        setAvailableMonths(["YTD", ...data.months])
-        // REMOVE "all" from financial years - only include specific years
-        setAvailableFinancialYears(data.financialYears || [])
-        // Set current financial year
-        setCurrentFinancialYear(data.currentFinancialYear || getCurrentFinancialYear())
-
-        // Set default to current financial year
-        const currentFY = data.currentFinancialYear || getCurrentFinancialYear()
-        if (data.financialYears && data.financialYears.includes(currentFY)) {
-          setSelectedFinancialYear(currentFY)
-          setSelectedMonth("YTD") // Default to YTD for current financial year
-        } else if (data.financialYears && data.financialYears.length > 0) {
-          setSelectedFinancialYear(data.financialYears[0])
-          setSelectedMonth("YTD")
-        }
-      } catch (err) {
-        setMonthsError("Failed to load available months. Please try again later.")
-        console.error("Error fetching available months:", err)
-      } finally {
-        setIsMonthsLoading(false)
+  const fetchAvailableMonths = useCallback(async () => {
+    setIsMonthsLoading(true)
+    setMonthsError(null)
+    try {
+      const token = getToken()
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/interim-dashboard/available-months`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+      if (!response.ok) {
+        throw new Error("Failed to fetch available months")
       }
+      const data: AvailableMonthsResponse = await response.json()
+
+      setAvailableMonths(["YTD", ...data.months])
+      setAvailableFinancialYears(data.financialYears || [])
+      setCurrentFinancialYear(data.currentFinancialYear || getCurrentFinancialYear())
+
+      const currentFY = data.currentFinancialYear || getCurrentFinancialYear()
+      if (data.financialYears && data.financialYears.includes(currentFY)) {
+        setSelectedFinancialYear(currentFY)
+        setSelectedMonth("YTD")
+      } else if (data.financialYears && data.financialYears.length > 0) {
+        setSelectedFinancialYear(data.financialYears[0])
+        setSelectedMonth("YTD")
+      }
+    } catch (err) {
+      setMonthsError("Failed to load available months. Please try again later.")
+    } finally {
+      setIsMonthsLoading(false)
     }
-
-    fetchDeliveryUnits()
-    fetchAvailableMonths()
-
-    // Set employee name and role
-    setEmployeeName(getEmployeeName() || "")
-    setEmployeeRole(getRole() || "")
   }, [])
 
   useEffect(() => {
-    const fetchMetrics = async () => {
-      setIsLoading(true)
-      setError(null)
-      try {
-        const token = getToken()
+    fetchDeliveryUnits()
+    fetchAvailableMonths()
+    setEmployeeName(getEmployeeName() || "")
+    setEmployeeRole(getRole() || "")
+  }, [fetchDeliveryUnits, fetchAvailableMonths])
 
-        console.log("Fetching metrics with:", {
-          deliveryUnit: selectedDeliveryUnit,
-          month: selectedMonth,
-          financialYear: selectedFinancialYear,
-        })
+  const fetchMetrics = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const token = getToken()
 
-        // Use query parameters for API call
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_BASE_URL}/interim-dashboard/organization-metrics?deliveryUnit=${selectedDeliveryUnit}&month=${encodeURIComponent(selectedMonth)}&financialYear=${encodeURIComponent(selectedFinancialYear)}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}/interim-dashboard/organization-metrics?deliveryUnit=${selectedDeliveryUnit}&month=${encodeURIComponent(selectedMonth)}&financialYear=${encodeURIComponent(selectedFinancialYear)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-        )
+        },
+      )
 
-        if (!response.ok) {
-          const errorText = await response.text()
-          console.error("API Error Response:", errorText)
-          throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
-        }
-
-        const data = await response.json()
-        console.log("Metrics data received:", data)
-        setMetrics(data)
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : "An unknown error occurred"
-        setError(`Failed to load organization metrics. ${errorMessage}`)
-        console.error("Error fetching metrics:", err)
-      } finally {
-        setIsLoading(false)
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`HTTP error! status: ${response.status} - ${errorText}`)
       }
-    }
 
-    // Only fetch if we have valid selections and financial year is not empty
+      const data = await response.json()
+      setMetrics(data)
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "An unknown error occurred"
+      setError(`Failed to load organization metrics. ${errorMessage}`)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [selectedDeliveryUnit, selectedMonth, selectedFinancialYear])
+
+  useEffect(() => {
     if (selectedDeliveryUnit && selectedFinancialYear !== "" && selectedMonth !== "") {
       fetchMetrics()
     }
-  }, [selectedDeliveryUnit, selectedMonth, selectedFinancialYear])
+  }, [selectedDeliveryUnit, selectedMonth, selectedFinancialYear, fetchMetrics])
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(value)
@@ -229,12 +199,21 @@ export default function DashboardPage() {
 
   const getMonthName = (monthNumber: string) => {
     if (monthNumber === "YTD") {
-      // Return different text based on whether it's current FY or not
       return getYTDDisplayText(selectedFinancialYear)
     }
     const months = [
-      "January", "February", "March", "April", "May", "June",
-      "July", "August", "September", "October", "November", "December",
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
     ]
     return months[Number.parseInt(monthNumber) - 1] || monthNumber
   }
@@ -257,7 +236,6 @@ export default function DashboardPage() {
   return (
     <div className="h-full w-full max-w-full overflow-hidden">
       <div className="h-full flex flex-col p-4 gap-6">
-        {/* Header Section */}
         <div className="flex flex-col space-y-4 lg:flex-row lg:items-center lg:justify-between lg:space-y-0 flex-shrink-0">
           <div className="min-w-0 flex-1">
             <p className="text-muted-foreground truncate">
@@ -286,9 +264,10 @@ export default function DashboardPage() {
               </SelectContent>
             </Select>
 
-            {/* Financial Year select - REQUIRED FIRST - REMOVED "All Financial Years" option */}
             <Select value={selectedFinancialYear} onValueChange={handleFinancialYearChange} disabled={isMonthsLoading}>
-              <SelectTrigger className={`w-full sm:w-[140px] ${selectedFinancialYear === "" ? "border-red-300 bg-red-50" : ""}`}>
+              <SelectTrigger
+                className={`w-full sm:w-[140px] ${selectedFinancialYear === "" ? "border-red-300 bg-red-50" : ""}`}
+              >
                 <SelectValue placeholder="Select FY *" />
               </SelectTrigger>
               <SelectContent>
@@ -306,13 +285,10 @@ export default function DashboardPage() {
               </SelectContent>
             </Select>
 
-            {/* Month select - DISABLED until financial year is selected - REMOVED "All Months" option */}
-            <Select 
-              value={selectedMonth} 
-              onValueChange={handleMonthChange} 
-              disabled={isMonthDisabled()}
-            >
-              <SelectTrigger className={`w-full sm:w-[160px] ${isMonthDisabled() ? "opacity-50 cursor-not-allowed" : ""}`}>
+            <Select value={selectedMonth} onValueChange={handleMonthChange} disabled={isMonthDisabled()}>
+              <SelectTrigger
+                className={`w-full sm:w-[160px] ${isMonthDisabled() ? "opacity-50 cursor-not-allowed" : ""}`}
+              >
                 <SelectValue placeholder={getMonthPlaceholder()} />
               </SelectTrigger>
               <SelectContent>
@@ -332,19 +308,17 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Validation Message */}
         {selectedFinancialYear === "" && (
           <Alert className="flex-shrink-0">
             <AlertDescription>
-              Please select a financial year to proceed. The financial year selection is required to load the appropriate data.
+              Please select a financial year to proceed. The financial year selection is required to load the
+              appropriate data.
             </AlertDescription>
           </Alert>
         )}
 
-        {/* Main Content - Rest of your existing content with updated props */}
         <div className="flex-1 min-h-0 overflow-auto">
           <div className="space-y-6">
-            {/* Metrics Cards */}
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
               <Card className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-shadow">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
@@ -456,12 +430,13 @@ export default function DashboardPage() {
               <Alert>
                 <AlertTitle>Getting Started</AlertTitle>
                 <AlertDescription>
-                  Please select a financial year from the dropdown above to load your dashboard data. Financial years run from April 1st to March 31st. You can then optionally select a specific month or view all data for the selected financial year.
+                  Please select a financial year from the dropdown above to load your dashboard data. Financial years
+                  run from April 1st to March 31st. You can then optionally select a specific month or view all data for
+                  the selected financial year.
                 </AlertDescription>
               </Alert>
             ) : (
               <div className="space-y-6">
-                {/* Chart Section */}
                 <Card className="shadow-sm">
                   <CardHeader className="space-y-2 pb-6">
                     <CardTitle className="text-xl font-semibold">Project Gross Margins</CardTitle>
@@ -488,7 +463,6 @@ export default function DashboardPage() {
                   </CardContent>
                 </Card>
 
-                {/* Table Section */}
                 <div className="pb-6">
                   <ProjectDetailsTable
                     deliveryUnit={selectedDeliveryUnit}

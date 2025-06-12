@@ -5,7 +5,6 @@ const fs = require("fs")
 const path = require("path")
 const { Op } = require("sequelize")
 
-// Ensure the upload directory exists
 const uploadDir = path.join(__dirname, "../../uploads/monthly-data")
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true })
@@ -26,40 +25,28 @@ exports.uploadMonthlyData = async (req, res) => {
 
   try {
     const filePath = req.file.path
-    logger.info(`Processing file: ${filePath}`)
-
-    // Read the Excel file
     const workbook = xlsx.readFile(filePath)
 
-    // Process the first sheet (Delivery Investment Report)
     if (workbook.SheetNames.length > 0) {
       const firstSheetName = workbook.SheetNames[0]
       const worksheet = workbook.Sheets[firstSheetName]
       const data = xlsx.utils.sheet_to_json(worksheet)
 
-      logger.info(`Found ${data.length} rows in the first sheet`)
-
-      // Map and store data in the delivery_investment_report table
       const results = await processDeliveryInvestmentReport(data)
 
-      // Create a record of the upload
       await db.DeliveryInvestmentReport.create({
-        project_code: req.body.project_code || null, // Optional project association
+        project_code: req.body.project_code || null,
         uploaded_path: filePath,
         created_by: req.user.id,
       })
 
-      // Return the actual file path with the filename that includes the timestamp
       return res.status(200).json({
         message: "File processed successfully",
-        results: {
-          deliveryInvestmentReport: results,
-        },
-        filePath: filePath, // Return the actual file path with timestamp
-        fileName: req.file.filename, // Return the actual filename with timestamp
+        results: { deliveryInvestmentReport: results },
+        filePath: filePath,
+        fileName: req.file.filename,
       })
     } else {
-      logger.error("No sheets found in the Excel file")
       return res.status(400).json({ error: "No sheets found in the Excel file" })
     }
   } catch (error) {
@@ -76,31 +63,20 @@ exports.downloadFile = async (req, res) => {
       return res.status(400).json({ error: "File path is required" })
     }
 
-    // Resolve the absolute path
     const absolutePath = path.join(__dirname, "../../", filePath)
 
-    // Check if file exists
     if (!fs.existsSync(absolutePath)) {
-      console.error(`File not found: ${absolutePath}`)
-
-      // Try to find the file by searching for files with the original filename
       const originalFileName = path.basename(filePath)
       const directory = path.dirname(absolutePath)
 
       if (fs.existsSync(directory)) {
         const files = fs.readdirSync(directory)
-        // Look for files that end with the original filename (after the timestamp)
         const matchingFile = files.find((file) => file.includes("-" + originalFileName))
 
         if (matchingFile) {
           const newPath = path.join(directory, matchingFile)
-          console.log(`Found matching file: ${newPath}`)
-
-          // Set headers for file download
           res.setHeader("Content-Disposition", `attachment; filename="${originalFileName}"`)
           res.setHeader("Content-Type", "application/octet-stream")
-
-          // Create read stream and pipe to response
           const fileStream = fs.createReadStream(newPath)
           fileStream.pipe(res)
           return
@@ -110,31 +86,23 @@ exports.downloadFile = async (req, res) => {
       return res.status(404).json({ error: "File not found" })
     }
 
-    // Get file name from path
     const fileName = path.basename(absolutePath)
-
-    // Set headers for file download
     res.setHeader("Content-Disposition", `attachment; filename="${fileName}"`)
     res.setHeader("Content-Type", "application/octet-stream")
 
-    // Create read stream and pipe to response
     const fileStream = fs.createReadStream(absolutePath)
     fileStream.pipe(res)
 
-    // Handle errors in the stream
     fileStream.on("error", (error) => {
-      console.error(`Error streaming file: ${error.message}`)
       if (!res.headersSent) {
         res.status(500).json({ error: "Error streaming file", details: error.message })
       }
     })
   } catch (error) {
-    console.error(`Error downloading file: ${error.message}`)
     res.status(500).json({ error: "Failed to download file", details: error.message })
   }
 }
 
-// Track monthly sheet uploads
 exports.trackMonthlyUpload = async (req, res) => {
   const { sheet_name, file_name, file_path } = req.body
   const uploaded_by = req.user.id
@@ -144,14 +112,10 @@ exports.trackMonthlyUpload = async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" })
     }
 
-    console.log("Received sheet_name:", sheet_name)
-
     const [sheet] = await db.sequelize.query(`SELECT id FROM Monthly_sheet WHERE sheet_name = ? LIMIT 1`, {
-      replacements: [sheet_name], // Replace the placeholder with the actual value
-      type: db.Sequelize.QueryTypes.SELECT, // Specify the query type
+      replacements: [sheet_name],
+      type: db.Sequelize.QueryTypes.SELECT,
     })
-
-    console.log(sheet.id)
 
     if (!sheet) {
       return res.status(400).json({ error: "Invalid sheet name" })
@@ -159,7 +123,6 @@ exports.trackMonthlyUpload = async (req, res) => {
 
     const sheet_id = sheet.id
 
-    // Proceed with version tracking
     const latestVersion = await db.Monthly_uploaded_sheets.findOne({
       where: { sheet_id },
       order: [["version", "DESC"]],
@@ -180,12 +143,10 @@ exports.trackMonthlyUpload = async (req, res) => {
 
     res.status(201).json(newUpload)
   } catch (error) {
-    console.error("Track upload failed:", error.message)
     res.status(500).json({ error: "Upload tracking failed", details: error.message })
   }
 }
 
-// filepath: c:\Users\Shruti.rawat\Desktop\GM Calculator new\GMCalculator_backend_4April2025\src\controllers\monthlyUploadController.js
 exports.getAllUploadedSheets = async (req, res) => {
   try {
     const uploadedSheets = await db.sequelize.query(
@@ -201,7 +162,6 @@ JOIN users u ON mus.uploaded_by = u.id`,
 
     res.status(200).json(uploadedSheets)
   } catch (error) {
-    console.error("Error fetching uploaded sheets:", error.message)
     res.status(500).json({ error: "Failed to fetch uploaded sheets", details: error.message })
   }
 }
@@ -223,7 +183,6 @@ exports.getAdditionalCosts = async (req, res) => {
 
     res.status(200).json(additionalCosts)
   } catch (error) {
-    console.error("Error fetching additional costs:", error.message)
     res.status(500).json({ error: "Failed to fetch additional costs", details: error.message })
   }
 }
@@ -231,29 +190,56 @@ exports.getAdditionalCosts = async (req, res) => {
 exports.addAdditionalCost = async (req, res) => {
   const { cost_name, cost } = req.body
 
-  // Validate input
   if (!cost_name || !cost) {
     return res.status(400).json({ error: "Both cost_name and cost are required." })
   }
 
   try {
-    // Insert the new additional cost into the database
     const newCost = await db.AdditionalCost.create({
       cost_name,
       cost,
-      createdBy: req.user.id, // Save the user ID of the logged-in user
+      createdBy: req.user.id,
     })
 
     res.status(201).json(newCost)
   } catch (error) {
-    console.error("Error adding additional cost:", error.message)
     res.status(500).json({ error: "Failed to add additional cost", details: error.message })
+  }
+}
+
+exports.updateAdditionalCost = async (req, res) => {
+  const { id } = req.params
+  const { cost_name, cost } = req.body
+
+  if (!cost_name || !cost) {
+    return res.status(400).json({ error: "Both cost_name and cost are required." })
+  }
+
+  try {
+    const [updatedRowsCount] = await db.AdditionalCost.update(
+      {
+        cost_name,
+        cost,
+        updatedBy: req.user.id,
+      },
+      {
+        where: { id }
+      }
+    )
+
+    if (updatedRowsCount === 0) {
+      return res.status(404).json({ error: "Additional cost not found." })
+    }
+
+    const updatedCost = await db.AdditionalCost.findByPk(id)
+    res.status(200).json(updatedCost)
+  } catch (error) {
+    res.status(500).json({ error: "Failed to update additional cost", details: error.message })
   }
 }
 
 exports.getUSExchangeRate = async (req, res) => {
   try {
-    // Fetch the exchange rate from the database with user information
     const exchangeRate = await db.sequelize.query(
       `SELECT r.rate,
        DATE_FORMAT(r.updatedat, '%Y-%m-%dT%H:%i:%sZ') AS updated_at,
@@ -270,59 +256,29 @@ exports.getUSExchangeRate = async (req, res) => {
 
     res.status(200).json(exchangeRate[0])
   } catch (error) {
-    console.error("Error fetching US exchange rate:", error.message)
     res.status(500).json({ error: "Failed to fetch US exchange rate", details: error.message })
   }
 }
 
-// exports.addUSExchangeRate = async (req, res) => {
-//   const { rate } = req.body;
-
-//   // Validate input
-//   if (!rate || isNaN(rate)) {
-//     return res.status(400).json({ error: "A valid exchange rate is required." });
-//   }
-
-//   try {
-//     // Update the exchange rate in the database
-//     const updatedRate = await db.sequelize.query(
-//       `INSERT INTO usexchangerate (rate) VALUES (?)`,
-//       {
-//         replacements: [rate],
-//         type: db.Sequelize.QueryTypes.INSERT,
-//       }
-//     );
-
-//     res.status(201).json({ message: "Exchange rate added successfully.", rate });
-//   } catch (error) {
-//     console.error("Error adding exchange rate:", error.message);
-//     res.status(500).json({ error: "Failed to add exchange rate", details: error.message });
-//   }
-// };
-
 exports.updateUSExchangeRate = async (req, res) => {
   const { rate } = req.body
 
-  // Validate input
   if (!rate || isNaN(rate)) {
     return res.status(400).json({ error: "A valid exchange rate is required." })
   }
 
   try {
-    // Update the exchange rate in the database
-    const updatedRate = await db.sequelize.query(`UPDATE usexchangerate SET rate = ?, updatedby = ?`, {
-      replacements: [rate, req.user.id], // Save the user ID of the logged-in user
+    await db.sequelize.query(`UPDATE usexchangerate SET rate = ?, updatedby = ?`, {
+      replacements: [rate, req.user.id],
       type: db.Sequelize.QueryTypes.UPDATE,
     })
 
     res.status(200).json({ message: "Exchange rate updated successfully.", rate })
   } catch (error) {
-    console.error("Error updating exchange rate:", error.message)
     res.status(500).json({ error: "Failed to update exchange rate", details: error.message })
   }
 }
 
-// Process data for the delivery_investment_report table
 async function processDeliveryInvestmentReport(data) {
   let inserted = 0
   let errors = 0
@@ -333,31 +289,30 @@ async function processDeliveryInvestmentReport(data) {
     const month = now.getMonth() + 1
     const year = now.getFullYear()
 
-const existingRows = await db.sequelize.query(
-  `SELECT created_at FROM delivery_investment_report 
-   WHERE MONTH(created_at) = ? AND YEAR(created_at) = ? LIMIT 1`,
-  {
-    replacements: [month, year],
-    type: db.Sequelize.QueryTypes.SELECT,
-    transaction,
-  }
-)
+    const existingRows = await db.sequelize.query(
+      `SELECT created_at FROM delivery_investment_report 
+       WHERE MONTH(created_at) = ? AND YEAR(created_at) = ? LIMIT 1`,
+      {
+        replacements: [month, year],
+        type: db.Sequelize.QueryTypes.SELECT,
+        transaction,
+      },
+    )
 
-let createdAtToReuse = null
+    let createdAtToReuse = null
 
-if (existingRows.length > 0) {
-  createdAtToReuse = existingRows[0].created_at
+    if (existingRows.length > 0) {
+      createdAtToReuse = existingRows[0].created_at
 
-  await db.sequelize.query(
-    `DELETE FROM delivery_investment_report 
-     WHERE MONTH(created_at) = ? AND YEAR(created_at) = ?`,
-    {
-      replacements: [month, year],
-      transaction,
+      await db.sequelize.query(
+        `DELETE FROM delivery_investment_report 
+         WHERE MONTH(created_at) = ? AND YEAR(created_at) = ?`,
+        {
+          replacements: [month, year],
+          transaction,
+        },
+      )
     }
-  )
-}
-
 
     for (const row of data) {
       try {
@@ -377,33 +332,32 @@ if (existingRows.length > 0) {
           technical_involvement: row["Technical Involvement"] || null,
         }
 
-        const now = new Date()
         await db.sequelize.query(
-  `INSERT INTO delivery_investment_report 
-   (service_type, account_name, type, delivery_unit, project_code, project_name,
-    engagement_type, staffing_model, employee_id, employee_name, designation,
-    resource_status, technical_involvement, created_at, updated_at) 
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,  // Reduced to 15 placeholders
-  {
-    replacements: [
-      record.service_type,
-      record.account_name,
-      record.type,
-      record.delivery_unit,
-      record.project_code,
-      record.project_name,
-      record.engagement_type,
-      record.staffing_model,
-      record.employee_id,
-      record.employee_name,
-      record.designation,
-      record.resource_status,
-      record.technical_involvement,
-      createdAtToReuse || now,
+          `INSERT INTO delivery_investment_report 
+           (service_type, account_name, type, delivery_unit, project_code, project_name,
+            engagement_type, staffing_model, employee_id, employee_name, designation,
+            resource_status, technical_involvement, created_at, updated_at) 
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          {
+            replacements: [
+              record.service_type,
+              record.account_name,
+              record.type,
+              record.delivery_unit,
+              record.project_code,
+              record.project_name,
+              record.engagement_type,
+              record.staffing_model,
+              record.employee_id,
+              record.employee_name,
+              record.designation,
+              record.resource_status,
+              record.technical_involvement,
+              createdAtToReuse || now,
               now,
             ],
             transaction,
-          }
+          },
         )
 
         inserted++
@@ -422,29 +376,22 @@ if (existingRows.length > 0) {
   }
 }
 
-
 exports.processSalarySheet = async (req, res) => {
   if (!req.file) {
-    logger.error("No file uploaded")
     return res.status(400).json({ error: "Please upload an Excel file" })
   }
 
   const allowedTypes = ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"]
   if (!allowedTypes.includes(req.file.mimetype)) {
-    logger.error(`Invalid file type: ${req.file.mimetype}`)
     return res.status(400).json({ error: "Invalid file type. Please upload an Excel file" })
   }
 
   try {
     const filePath = req.file.path
-    logger.info(`Processing salary sheet file: ${filePath}`)
-
     const workbook = xlsx.readFile(filePath)
     const firstSheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[firstSheetName]
     const data = xlsx.utils.sheet_to_json(worksheet)
-
-    logger.info(`Found ${data.length} rows in the salary sheet`)
 
     const transaction = await db.sequelize.transaction()
     try {
@@ -462,18 +409,17 @@ exports.processSalarySheet = async (req, res) => {
           replacements: [month, year],
           type: db.Sequelize.QueryTypes.SELECT,
           transaction,
-        }
+        },
       )
 
       let createdAtToReuse = null
 
       if (existingRows.length > 0) {
         createdAtToReuse = existingRows[0].created_at
-
         await db.sequelize.query(
           `DELETE FROM salarySheet 
            WHERE MONTH(created_at) = ? AND YEAR(created_at) = ?`,
-          { replacements: [month, year], transaction }
+          { replacements: [month, year], transaction },
         )
       }
 
@@ -507,7 +453,6 @@ exports.processSalarySheet = async (req, res) => {
           }
 
           if (!record.EmployeeCode || !record.EmployeeName || !record.DateOfJoining) {
-            logger.warn(`Missing required fields for record: ${JSON.stringify(record)}`)
             errors++
             continue
           }
@@ -530,7 +475,7 @@ exports.processSalarySheet = async (req, res) => {
                 now,
               ],
               transaction,
-            }
+            },
           )
 
           inserted++
@@ -550,42 +495,29 @@ exports.processSalarySheet = async (req, res) => {
       })
     } catch (error) {
       await transaction.rollback()
-      logger.error(`Transaction error: ${error.message}`)
       return res.status(500).json({ error: "Error processing file", details: error.message })
     }
   } catch (error) {
-    logger.error(`Error processing file: ${error.message}`)
     return res.status(500).json({ error: "Error processing file", details: error.message })
   }
 }
 
-
-
 exports.processRevenueSheet = async (req, res) => {
   if (!req.file) {
-    logger.error("No file uploaded")
     return res.status(400).json({ error: "Please upload an Excel file" })
   }
 
-  const allowedTypes = [
-    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    "application/vnd.ms-excel",
-  ]
+  const allowedTypes = ["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "application/vnd.ms-excel"]
   if (!allowedTypes.includes(req.file.mimetype)) {
-    logger.error(`Invalid file type: ${req.file.mimetype}`)
     return res.status(400).json({ error: "Invalid file type. Please upload an Excel file" })
   }
 
   try {
     const filePath = req.file.path
-    logger.info(`Processing revenue sheet file: ${filePath}`)
-
     const workbook = xlsx.readFile(filePath)
     const firstSheetName = workbook.SheetNames[0]
     const worksheet = workbook.Sheets[firstSheetName]
     const data = xlsx.utils.sheet_to_json(worksheet)
-
-    logger.info(`Found ${data.length} rows in the revenue sheet`)
 
     const transaction = await db.sequelize.transaction()
     try {
@@ -603,18 +535,17 @@ exports.processRevenueSheet = async (req, res) => {
           replacements: [month, year],
           type: db.Sequelize.QueryTypes.SELECT,
           transaction,
-        }
+        },
       )
 
       let createdAtToReuse = null
 
       if (existingRows.length > 0) {
         createdAtToReuse = existingRows[0].created_at
-
         await db.sequelize.query(
           `DELETE FROM revenue 
            WHERE MONTH(created_at) = ? AND YEAR(created_at) = ?`,
-          { replacements: [month, year], transaction }
+          { replacements: [month, year], transaction },
         )
       }
 
@@ -630,7 +561,6 @@ exports.processRevenueSheet = async (req, res) => {
           }
 
           if (!record.project_id || !record.project_name) {
-            logger.warn(`Missing required fields for record: ${JSON.stringify(record)}`)
             errors++
             continue
           }
@@ -651,7 +581,7 @@ exports.processRevenueSheet = async (req, res) => {
                 now,
               ],
               transaction,
-            }
+            },
           )
 
           inserted++
@@ -671,45 +601,35 @@ exports.processRevenueSheet = async (req, res) => {
       })
     } catch (error) {
       await transaction.rollback()
-      logger.error(`Transaction error: ${error.message}`)
       return res.status(500).json({ error: "Error processing file", details: error.message })
     }
   } catch (error) {
-    logger.error(`Error processing file: ${error.message}`)
     return res.status(500).json({ error: "Error processing file", details: error.message })
   }
 }
 
-
-
-// Updated monthlyUploadController.js to use month_year instead of Month
-
 exports.calculateInterimCost = async (req, res) => {
   try {
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1; // 1-based
-    const currentYear = now.getFullYear();
- 
-    // Calculate previous month/year (e.g., March 2025 if today is April 2025)
-    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
-    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-    const monthYear = `${String(prevMonth).padStart(2, '0')}/${prevYear}`; // "03/2025"
- 
-    // Check for existing data and delete if exists
+    const now = new Date()
+    const currentMonth = now.getMonth() + 1
+    const currentYear = now.getFullYear()
+
+    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1
+    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear
+    const monthYear = `${String(prevMonth).padStart(2, "0")}/${prevYear}`
+
     const [existingRows] = await db.sequelize.query(
       `SELECT COUNT(*) as count FROM interimcostcalculation WHERE month_year = ?`,
-      { replacements: [monthYear], type: db.Sequelize.QueryTypes.SELECT }
-    );
- 
+      { replacements: [monthYear], type: db.Sequelize.QueryTypes.SELECT },
+    )
+
     if (existingRows.count > 0) {
-      // Delete existing data for this month_year
-      await db.sequelize.query(
-        `DELETE FROM interimcostcalculation WHERE month_year = ?`,
-        { replacements: [monthYear], type: db.Sequelize.QueryTypes.DELETE }
-      );
+      await db.sequelize.query(`DELETE FROM interimcostcalculation WHERE month_year = ?`, {
+        replacements: [monthYear],
+        type: db.Sequelize.QueryTypes.DELETE,
+      })
     }
- 
-    // Insert data filtered by current month (April 2025) but tagged as previous month (March 2025)
+
     await db.sequelize.query(
       `INSERT INTO interimcostcalculation
         (ProjectId, EmpId, TechnicalInvolvement, Salary, AdditionalCost, month_year)
@@ -727,42 +647,37 @@ exports.calculateInterimCost = async (req, res) => {
       {
         replacements: { monthYear, currentMonth, currentYear },
         type: db.Sequelize.QueryTypes.INSERT,
-      }
-    );
- 
-    res.status(201).json({ message: "Interim cost calculation completed successfully." });
+      },
+    )
+
+    res.status(201).json({ message: "Interim cost calculation completed successfully." })
   } catch (error) {
-    console.error("Error calculating interim cost:", error.message);
-    res.status(500).json({ error: "Failed to calculate interim cost", details: error.message });
+    res.status(500).json({ error: "Failed to calculate interim cost", details: error.message })
   }
-};
+}
 
 exports.calculateInterimProjectGM = async (req, res) => {
   try {
-    const now = new Date();
-    const currentMonth = now.getMonth() + 1;
-    const currentYear = now.getFullYear();
- 
-    // Previous month/year logic
-    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
-    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
-    const monthYear = `${String(prevMonth).padStart(2, '0')}/${prevYear}`;
- 
-    // Check for existing data and delete if exists
+    const now = new Date()
+    const currentMonth = now.getMonth() + 1
+    const currentYear = now.getFullYear()
+
+    const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1
+    const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear
+    const monthYear = `${String(prevMonth).padStart(2, "0")}/${prevYear}`
+
     const [existingRows] = await db.sequelize.query(
       `SELECT COUNT(*) as count FROM interimprojectgm WHERE month_year = ?`,
-      { replacements: [monthYear], type: db.Sequelize.QueryTypes.SELECT }
-    );
- 
+      { replacements: [monthYear], type: db.Sequelize.QueryTypes.SELECT },
+    )
+
     if (existingRows.count > 0) {
-      // Delete existing data for this month_year
-      await db.sequelize.query(
-        `DELETE FROM interimprojectgm WHERE month_year = ?`,
-        { replacements: [monthYear], type: db.Sequelize.QueryTypes.DELETE }
-      );
+      await db.sequelize.query(`DELETE FROM interimprojectgm WHERE month_year = ?`, {
+        replacements: [monthYear],
+        type: db.Sequelize.QueryTypes.DELETE,
+      })
     }
- 
-    // Insert data (filtered by current upload month, tagged as previous month)
+
     await db.sequelize.query(
       `INSERT INTO interimprojectgm (ProjectId, Revenue, Cost, month_year)
        SELECT 
@@ -778,27 +693,22 @@ exports.calculateInterimProjectGM = async (req, res) => {
       {
         replacements: { monthYear, currentMonth, currentYear },
         type: db.Sequelize.QueryTypes.INSERT,
-      }
-    );
- 
-    res.status(201).json({ message: "Interim Project GM calculation completed successfully." });
-  } catch (error) {
-    console.error("Error calculating interim project GM:", error.message);
-    res.status(500).json({ error: "Failed to calculate interim project GM", details: error.message });
-  }
-};
- 
+      },
+    )
 
+    res.status(201).json({ message: "Interim Project GM calculation completed successfully." })
+  } catch (error) {
+    res.status(500).json({ error: "Failed to calculate interim project GM", details: error.message })
+  }
+}
 
 exports.getAllInterimProjectGM = async (req, res) => {
   try {
-    const data = await db.sequelize.query(
-      `SELECT * FROM interimprojectgm ORDER BY Id DESC`,
-      { type: db.Sequelize.QueryTypes.SELECT }
-    );
-    res.status(200).json(data);
+    const data = await db.sequelize.query(`SELECT * FROM interimprojectgm ORDER BY Id DESC`, {
+      type: db.Sequelize.QueryTypes.SELECT,
+    })
+    res.status(200).json(data)
   } catch (error) {
-    console.error("Error fetching interim project GM data:", error.message);
-    res.status(500).json({ error: "Failed to fetch interim project GM data", details: error.message });
+    res.status(500).json({ error: "Failed to fetch interim project GM data", details: error.message })
   }
-};
+}

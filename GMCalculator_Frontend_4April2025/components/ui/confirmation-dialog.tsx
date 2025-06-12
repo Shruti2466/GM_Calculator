@@ -18,6 +18,7 @@ interface ConfirmationDialogProps {
   description: string
   confirmText?: string
   cancelText?: string
+  variant?: "default" | "destructive"
 }
 
 export function ConfirmationDialog({
@@ -28,6 +29,7 @@ export function ConfirmationDialog({
   description,
   confirmText = "Confirm",
   cancelText = "Cancel",
+  variant = "default",
 }: ConfirmationDialogProps) {
   return (
     <AlertDialog open={isOpen} onOpenChange={onClose}>

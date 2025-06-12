@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Upload } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -19,8 +18,6 @@ export function UploadButton() {
 
   const handleUpload = async () => {
     if (!file) return
-    // Here you would handle the file upload
-    console.log("Uploading:", file.name)
   }
 
   return (

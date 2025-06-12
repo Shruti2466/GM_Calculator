@@ -1,6 +1,6 @@
 "use client"
 import type * as React from "react"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -75,10 +75,8 @@ export default function UploadMonthlyDataPage() {
     sheet6: null,
   })
 
-  // Add pagination state
   const [currentPage, setCurrentPage] = useState(1)
   const [itemsPerPage] = useState(5)
-
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: null,
     direction: "asc",
@@ -129,17 +127,7 @@ export default function UploadMonthlyDataPage() {
     return previousMonth.toLocaleString("en-US", { month: "long", year: "numeric" })
   }
 
-  useEffect(() => {
-    const token = getToken()
-    if (!token) {
-      router.push("/login")
-    }
-    fetchUploadedFiles()
-    fetchExchangeRate()
-    fetchAdditionalCosts()
-  }, [router])
-
-  const fetchUploadedFiles = async () => {
+  const fetchUploadedFiles = useCallback(async () => {
     setIsLoading(true)
     try {
       const token = getToken()
@@ -152,33 +140,23 @@ export default function UploadMonthlyDataPage() {
       if (!response.ok) throw new Error("Failed to fetch uploaded files")
 
       const data = await response.json()
-      console.log("API Response:", data) // Log the raw API response
-      console.log("Sheet Mappings:", sheetMappings)
-      // Transform backend data to match our frontend interface
       const transformedData = data.map((file: any) => {
         const sheetKey = Object.entries(sheetMappings).find(([key, value]) => value.name === file.sheet_name)?.[0]
-
-        if (!sheetKey) {
-          console.warn(`No matching sheetKey found for sheet_name: ${file.sheet_name}`)
-        }
 
         return {
           id: file.id,
           fileName: file.file_name,
           uploadedBy: file.uploaded_by || "Unknown",
           uploadedAt: file.uploaded_at,
-          sheetType: sheetKey || "unknown", // Default to "unknown" if no match is found
+          sheetType: sheetKey || "unknown",
           sheetName: file.sheet_name || "Unknown Sheet",
           version: file.version || 1,
-          is_current: file.is_current === 1, // Convert 0/1 to false/true
-          filePath: file.file_path || `/uploads/monthly-data/${file.file_name}`, // Use file_path from API or construct a default path
+          is_current: file.is_current === 1,
+          filePath: file.file_path || `/uploads/monthly-data/${file.file_name}`,
         }
       })
-      console.log("Transformed Data:", transformedData)
       setUploadedFiles(transformedData)
-      console.log("Uploaded Files:", uploadedFiles) // This will log the old value, not the updated one.
     } catch (error) {
-      console.error("Error fetching uploaded files:", error)
       toast({
         title: "Error",
         description: "Failed to load uploaded files. Please try again later.",
@@ -187,8 +165,9 @@ export default function UploadMonthlyDataPage() {
     } finally {
       setIsLoading(false)
     }
-  }
-  const fetchAdditionalCosts = async () => {
+  }, [toast])
+
+  const fetchAdditionalCosts = useCallback(async () => {
     setIsLoadingCosts(true)
     try {
       const token = getToken()
@@ -203,7 +182,6 @@ export default function UploadMonthlyDataPage() {
       const data = await response.json()
       setAdditionalCosts(data)
     } catch (error) {
-      console.error("Error fetching additional costs:", error)
       toast({
         title: "Error",
         description: "Failed to load additional costs. Please try again later.",
@@ -212,9 +190,9 @@ export default function UploadMonthlyDataPage() {
     } finally {
       setIsLoadingCosts(false)
     }
-  }
+  }, [toast])
 
-  const fetchExchangeRate = async () => {
+  const fetchExchangeRate = useCallback(async () => {
     setIsLoadingRate(true)
     try {
       const token = getToken()
@@ -227,10 +205,8 @@ export default function UploadMonthlyDataPage() {
       if (!response.ok) throw new Error("Failed to fetch exchange rate")
 
       const data = await response.json()
-      console.log("Exchange Rate API Response:", data) // Debug log
       setExchangeRate(data)
     } catch (error) {
-      console.error("Error fetching exchange rate:", error)
       toast({
         title: "Error",
         description: "Failed to load exchange rate. Please try again later.",
@@ -239,9 +215,20 @@ export default function UploadMonthlyDataPage() {
     } finally {
       setIsLoadingRate(false)
     }
-  }
+  }, [toast])
 
-  // Updated file download function to use the new API
+  useEffect(() => {
+    const token = getToken()
+    if (!token) {
+      router.push("/login")
+      return
+    }
+
+    fetchUploadedFiles()
+    fetchExchangeRate()
+    fetchAdditionalCosts()
+  }, [router, fetchUploadedFiles, fetchExchangeRate, fetchAdditionalCosts])
+
   const handleDownloadFile = async (fileId: number, fileName: string, filePath: string) => {
     setIsDownloading((prev) => ({ ...prev, [fileId]: true }))
     try {
@@ -257,10 +244,7 @@ export default function UploadMonthlyDataPage() {
 
       if (!response.ok) throw new Error("Failed to download file")
 
-      // Create a blob from the response
       const blob = await response.blob()
-
-      // Create a download link and trigger the download
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.style.display = "none"
@@ -269,7 +253,6 @@ export default function UploadMonthlyDataPage() {
       document.body.appendChild(a)
       a.click()
 
-      // Clean up
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
 
@@ -278,7 +261,6 @@ export default function UploadMonthlyDataPage() {
         description: `Downloading ${fileName}`,
       })
     } catch (error) {
-      console.error("Error downloading file:", error)
       toast({
         title: "Download Failed",
         description: "Failed to download the file. Please try again.",
@@ -292,20 +274,12 @@ export default function UploadMonthlyDataPage() {
   const handleFileChange = async (sheetKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0]
-      console.log("Selected file:", file.name)
-      console.log("Sheet key:", sheetKey)
 
-      // Automatically upload the file for "Salary Sheet", "Delivery Investment Report", or "Revenue"
-      if (sheetKey === "sheet2" || sheetKey === "sheet1" || sheetKey === "sheet3") {
-        setSelectedFiles((prev) => ({ ...prev, [sheetKey]: file }))
-        await handleUpload(sheetKey, file) // Ensure this is called immediately
-        return
-      }
-
-      // For other sheets, check if the sheet is already uploaded
+      // Check if file already exists for this sheet type
       const uploadedFile = uploadedFiles.find((file) => file.sheetType === sheetKey)
 
       if (uploadedFile) {
+        // Show confirmation dialog for ALL sheets (including sheet1, sheet2, sheet3)
         setConfirmDialog({
           isOpen: true,
           sheetKey: sheetKey,
@@ -315,18 +289,28 @@ export default function UploadMonthlyDataPage() {
         return
       }
 
-      // Proceed with the upload if the file is not already uploaded
+      // If no existing file, upload directly
       setSelectedFiles((prev) => ({ ...prev, [sheetKey]: file }))
       await handleUpload(sheetKey, file)
     }
   }
 
   const handleCancelUpload = () => {
-    setConfirmDialog((prev) => ({
-      ...prev,
+    // Reset the file input that triggered the confirmation
+    const fileInput = document.getElementById(`${confirmDialog.sheetKey}-upload`) as HTMLInputElement
+    if (fileInput) {
+      fileInput.value = ""
+    }
+
+    // Reset the dialog state
+    setConfirmDialog({
       isOpen: false,
-    }))
-    // Reset the selected file for the relevant sheetKey
+      sheetKey: "",
+      file: null,
+      message: "",
+    })
+
+    // Clear the selected file for this sheet
     setSelectedFiles((prev) => ({
       ...prev,
       [confirmDialog.sheetKey]: null,
@@ -334,34 +318,41 @@ export default function UploadMonthlyDataPage() {
   }
 
   const handleConfirmUpload = async () => {
-    setConfirmDialog({ ...confirmDialog, isOpen: false })
-    if (confirmDialog.sheetKey && confirmDialog.file) {
-      setSelectedFiles((prev) => ({ ...prev, [confirmDialog.sheetKey]: confirmDialog.file }))
-      await handleUpload(confirmDialog.sheetKey, confirmDialog.file)
+    const { sheetKey, file } = confirmDialog
+    
+    // Close the dialog first
+    setConfirmDialog({
+      isOpen: false,
+      sheetKey: "",
+      file: null,
+      message: "",
+    })
+    
+    if (sheetKey && file) {
+      // Set the selected file and upload
+      setSelectedFiles((prev) => ({ ...prev, [sheetKey]: file }))
+      await handleUpload(sheetKey, file)
     }
   }
 
-  // In handleUpload:
   const handleUpload = async (sheetKey: string, file: File) => {
     if (!file) return
+    
     setIsUploading((prev) => ({ ...prev, [sheetKey]: true }))
+    
     try {
       const token = getToken()
       const formData = new FormData()
       formData.append("file", file)
       formData.append("sheet_name", sheetMappings[sheetKey as keyof typeof sheetMappings].name)
 
-      // Determine the API endpoint based on the sheetKey
       const apiEndpoint =
-        sheetKey === "sheet2" // Salary Sheet
+        sheetKey === "sheet2"
           ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/salary-sheet`
-          : sheetKey === "sheet3" // Revenue Sheet
+          : sheetKey === "sheet3"
             ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/revenue-sheet`
             : `${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data`
 
-      console.log(`Uploading to endpoint: ${apiEndpoint}`)
-
-      // First upload the file content
       const uploadResponse = await fetch(apiEndpoint, {
         method: "POST",
         headers: {
@@ -372,18 +363,13 @@ export default function UploadMonthlyDataPage() {
 
       if (!uploadResponse.ok) {
         const errorData = await uploadResponse.json()
-        console.error("Upload error:", errorData)
         throw new Error(errorData.error || "Failed to upload file")
       }
 
       const uploadData = await uploadResponse.json()
-      console.log("Upload response:", uploadData)
-
-      // Use the actual file path returned from the API
       const actualFilePath = uploadData.filePath ? uploadData.filePath.replace(/^.*[\\/]/, "") : file.name
       const relativePath = `/uploads/monthly-data/${actualFilePath}`
 
-      // Then track the upload in the new system
       const trackResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/track-upload`, {
         method: "POST",
         headers: {
@@ -393,48 +379,45 @@ export default function UploadMonthlyDataPage() {
         body: JSON.stringify({
           sheet_name: sheetMappings[sheetKey as keyof typeof sheetMappings].name,
           file_name: file.name,
-          file_path: relativePath, // Use the actual file path with timestamp
+          file_path: relativePath,
         }),
       })
 
       if (!trackResponse.ok) {
         const errorData = await trackResponse.json()
-        console.error("Track upload error:", errorData)
         throw new Error(errorData.error || "Failed to track upload")
       }
 
       const uploadedFile = await trackResponse.json()
-      console.log("Track upload response:", uploadedFile)
 
-      // Append the new file to the upload history
-      setUploadedFiles((prev) => [
-        ...prev,
-        {
-          id: uploadedFile.id,
-          fileName: uploadedFile.file_name,
-          uploadedBy: uploadedFile.uploaded_by,
-          uploadedAt: uploadedFile.uploaded_at,
-          sheetType: sheetKey,
-          sheetName: sheetMappings[sheetKey as keyof typeof sheetMappings].name,
-          version: uploadedFile.version || 1,
-          is_current: true, // Assuming the new upload is the current one
-          filePath: uploadedFile.file_path || relativePath, // Use the actual file path
-        },
-      ])
+      // ✅ REFRESH THE UPLOADED FILES LIST AFTER SUCCESSFUL UPLOAD
+      await fetchUploadedFiles()
 
       toast({
         title: "Upload Successful",
         description: `${sheetMappings[sheetKey as keyof typeof sheetMappings].name} uploaded successfully.`,
       })
 
+      // Clear the selected file
       setSelectedFiles((prev) => ({ ...prev, [sheetKey]: null }))
+
+      // Reset file input
+      const fileInput = document.getElementById(`${sheetKey}-upload`) as HTMLInputElement
+      if (fileInput) {
+        fileInput.value = ""
+      }
     } catch (error) {
-      console.error("Upload failed:", error)
       toast({
         title: "Upload Failed",
         description: `Failed to upload the file: ${error instanceof Error ? error.message : "Unknown error"}`,
         variant: "destructive",
       })
+      
+      // Reset file input on error as well
+      const fileInput = document.getElementById(`${sheetKey}-upload`) as HTMLInputElement
+      if (fileInput) {
+        fileInput.value = ""
+      }
     } finally {
       setIsUploading((prev) => ({ ...prev, [sheetKey]: false }))
     }
@@ -447,11 +430,6 @@ export default function UploadMonthlyDataPage() {
       .filter((file) => file.sheetType === sheetKey)
       .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())[0]
   }
-
-  console.log("Uploaded Files:", uploadedFiles)
-
-  console.log("Is File Uploaded:", isFileUploaded("sheet1"))
-  console.log("Uploaded File Info:", getUploadedFileInfo("sheet1"))
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString)
@@ -477,7 +455,6 @@ export default function UploadMonthlyDataPage() {
     setSortConfig({ key, direction })
   }
 
-  // Add function to get sorted items
   const getSortedItems = () => {
     if (!sortConfig.key) return uploadedFiles
 
@@ -488,12 +465,10 @@ export default function UploadMonthlyDataPage() {
       const aValue = a[sortConfig.key!]
       const bValue = b[sortConfig.key!]
 
-      // Handle special case for version which is a number
       if (sortConfig.key === "version") {
         return sortConfig.direction === "asc" ? Number(aValue) - Number(bValue) : Number(bValue) - Number(aValue)
       }
 
-      // Handle special case for is_current which is a boolean
       if (sortConfig.key === "is_current") {
         return sortConfig.direction === "asc"
           ? a.is_current === b.is_current
@@ -508,14 +483,12 @@ export default function UploadMonthlyDataPage() {
               : -1
       }
 
-      // Handle dates
       if (sortConfig.key === "uploadedAt") {
         const dateA = new Date(a.uploadedAt).getTime()
         const dateB = new Date(b.uploadedAt).getTime()
         return sortConfig.direction === "asc" ? dateA - dateB : dateB - dateA
       }
 
-      // Default string comparison
       if (typeof aValue === "string" && typeof bValue === "string") {
         return sortConfig.direction === "asc" ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue)
       }
@@ -524,16 +497,12 @@ export default function UploadMonthlyDataPage() {
     })
   }
 
-  // Get the sorted items
   const sortedItems = getSortedItems()
-
-  // Calculate pagination
   const indexOfLastItem = currentPage * itemsPerPage
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
   const currentItems = sortedItems.slice(indexOfFirstItem, indexOfLastItem)
   const totalPages = Math.ceil(sortedItems.length / itemsPerPage)
 
-  // Change page
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber)
   const nextPage = () => setCurrentPage((prev) => Math.min(prev + 1, totalPages))
   const prevPage = () => setCurrentPage((prev) => Math.max(prev - 1, 1))
@@ -566,8 +535,9 @@ export default function UploadMonthlyDataPage() {
 
       if (!response.ok) throw new Error("Failed to add additional cost")
 
-      const newCost = await response.json()
-      setAdditionalCosts([newCost, ...additionalCosts]) // Add to the beginning of the array
+      // ✅ REFRESH THE COSTS LIST INSTEAD OF MANUAL UPDATE
+      await fetchAdditionalCosts()
+      
       setNewCostName("")
       setNewCostValue("")
       toast({
@@ -575,7 +545,6 @@ export default function UploadMonthlyDataPage() {
         description: "Additional cost added successfully.",
       })
     } catch (error) {
-      console.error("Error adding additional cost:", error)
       toast({
         title: "Error",
         description: "Failed to add additional cost. Please try again.",
@@ -605,29 +574,29 @@ export default function UploadMonthlyDataPage() {
     setIsSubmittingCost(true)
     try {
       const token = getToken()
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/additional-costs/${id}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/additional-costs/${id}`, {
         method: "PUT",
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          name: editCostName,
-          value: Number.parseFloat(editCostValue),
+          cost_name: editCostName,
+          cost: editCostValue,
         }),
       })
 
       if (!response.ok) throw new Error("Failed to update additional cost")
 
-      const updatedCost = await response.json()
-      setAdditionalCosts(additionalCosts.map((cost) => (cost.id === id ? updatedCost : cost)))
+      // ✅ REFRESH THE COSTS LIST INSTEAD OF MANUAL UPDATE
+      await fetchAdditionalCosts()
+      
       setIsEditingCost(null)
       toast({
         title: "Success",
         description: "Additional cost updated successfully.",
       })
     } catch (error) {
-      console.error("Error updating additional cost:", error)
       toast({
         title: "Error",
         description: "Failed to update additional cost. Please try again.",
@@ -655,7 +624,7 @@ export default function UploadMonthlyDataPage() {
 
     setIsSubmittingRate(true)
     try {
-      const token = getToken() // Ensure this function retrieves a valid token
+      const token = getToken()
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/exchange-rate/usd`, {
         method: "PUT",
         headers: {
@@ -669,15 +638,15 @@ export default function UploadMonthlyDataPage() {
 
       if (!response.ok) throw new Error("Failed to update exchange rate")
 
-      const updatedRate = await response.json()
-      setExchangeRate(updatedRate)
+      // ✅ REFRESH THE EXCHANGE RATE INSTEAD OF MANUAL UPDATE
+      await fetchExchangeRate()
+      
       setNewExchangeRate("")
       toast({
         title: "Success",
         description: "Exchange rate updated successfully.",
       })
     } catch (error) {
-      console.error("Error updating exchange rate:", error)
       toast({
         title: "Error",
         description: "Failed to update exchange rate. Please try again.",
@@ -687,6 +656,7 @@ export default function UploadMonthlyDataPage() {
       setIsSubmittingRate(false)
     }
   }
+
   const getSortIcon = (key: keyof UploadedFile) => {
     if (sortConfig.key !== key) {
       return <ArrowUpDown className="ml-1 h-4 w-4 inline" />
@@ -734,10 +704,12 @@ export default function UploadMonthlyDataPage() {
                     accept=".xlsx,.xls"
                     onChange={(e) => handleFileChange(sheetKey, e)}
                     className="cursor-pointer"
+                    disabled={isUploading[sheetKey]}
                   />
                 </div>
               </div>
-              {selectedFiles[sheetKey] && (
+              {isUploading[sheetKey] && <p className="text-xs text-blue-600">Uploading...</p>}
+              {selectedFiles[sheetKey] && !isUploading[sheetKey] && (
                 <p className="text-xs text-green-600">✓ {selectedFiles[sheetKey]?.name} selected</p>
               )}
             </div>
@@ -752,7 +724,6 @@ export default function UploadMonthlyDataPage() {
     try {
       const token = getToken()
 
-      // First API call - Calculate Interim Cost
       const costResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/interim-cost`, {
         method: "POST",
         headers: {
@@ -765,7 +736,6 @@ export default function UploadMonthlyDataPage() {
         throw new Error("Failed to calculate interim cost")
       }
 
-      // Second API call - Calculate Interim Project GM
       const gmResponse = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/upload/monthly-data/interim-project-gm`, {
         method: "POST",
         headers: {
@@ -778,16 +748,14 @@ export default function UploadMonthlyDataPage() {
         throw new Error("Failed to calculate interim project GM")
       }
 
-      // Check if response status is 201 (Created) for success
       if (gmResponse.status === 201) {
-        // Show SweetAlert2 success message
         await Swal.fire({
           title: "Success!",
           text: "GM Calculated Successfully",
           icon: "success",
           confirmButtonText: "OK",
-          confirmButtonColor: "#10b981", // Green color
-          timer: 3000, // Auto close after 3 seconds
+          confirmButtonColor: "#10b981",
+          timer: 3000,
           timerProgressBar: true,
           showClass: {
             popup: "animate__animated animate__fadeInDown",
@@ -798,24 +766,19 @@ export default function UploadMonthlyDataPage() {
         })
       }
 
-      // Keep the existing toast as backup
       toast({
         title: "Success",
         description: "GM calculation completed successfully",
       })
     } catch (error) {
-      console.error("Error calculating GM:", error)
-
-      // Show error SweetAlert
       await Swal.fire({
         title: "Error!",
         text: `Failed to calculate GM: ${error instanceof Error ? error.message : "Unknown error"}`,
         icon: "error",
         confirmButtonText: "OK",
-        confirmButtonColor: "#ef4444", // Red color
+        confirmButtonColor: "#ef4444",
       })
 
-      // Keep existing toast for error as well
       toast({
         title: "Error",
         description: `Failed to calculate GM: ${error instanceof Error ? error.message : "Unknown error"}`,
@@ -841,7 +804,6 @@ export default function UploadMonthlyDataPage() {
           </div>
         </div>
 
-        {/* Main Content - Remove internal scrolling */}
         <div className="flex-1 min-h-0">
           <Tabs defaultValue="upload" className="h-full flex flex-col">
             <TabsList className="flex-shrink-0 mb-4">
@@ -987,7 +949,6 @@ export default function UploadMonthlyDataPage() {
                           </div>
                         </div>
 
-                        {/* Pagination - Fixed at bottom */}
                         <div className="flex items-center justify-between mt-4 pt-4 border-t flex-shrink-0">
                           <div className="text-sm text-muted-foreground">
                             Showing {indexOfFirstItem + 1}-{Math.min(indexOfLastItem, sortedItems.length)} of{" "}
@@ -1039,7 +1000,6 @@ export default function UploadMonthlyDataPage() {
 
               <TabsContent value="settings" className="h-full m-0">
                 <div className="grid gap-6 lg:grid-cols-2 h-full">
-                  {/* Additional Costs Section */}
                   <Card className="flex flex-col h-full">
                     <CardHeader className="flex-shrink-0">
                       <CardTitle>Additional Costs</CardTitle>
@@ -1121,9 +1081,9 @@ export default function UploadMonthlyDataPage() {
                                         <p className="font-medium">{cost.cost_name}</p>
                                         <p className="text-sm text-muted-foreground">${cost.cost}</p>
                                       </div>
-                                      <Button variant="ghost" size="sm" onClick={() => handleEditCost(cost)}>
+                                      {/* <Button variant="ghost" size="sm" onClick={() => handleEditCost(cost)}>
                                         Edit
-                                      </Button>
+                                      </Button> */}
                                     </div>
                                     <div className="mt-2 space-y-1">
                                       <div className="flex items-center text-xs text-muted-foreground">
@@ -1150,7 +1110,6 @@ export default function UploadMonthlyDataPage() {
                     </CardContent>
                   </Card>
 
-                  {/* US Exchange Rate Section */}
                   <Card className="flex flex-col h-full">
                     <CardHeader className="flex-shrink-0">
                       <CardTitle>US Exchange Rate</CardTitle>
@@ -1201,7 +1160,6 @@ export default function UploadMonthlyDataPage() {
         </div>
       </div>
 
-      {/* Confirmation dialog component */}
       <ConfirmationDialog
         isOpen={confirmDialog.isOpen}
         onClose={handleCancelUpload}
