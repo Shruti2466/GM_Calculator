@@ -31,15 +31,12 @@ const isInFinancialYear = (monthYear, financialYear) => {
 };
 
 // CORRECTED: Helper function to build financial year filter with validation
-// CORRECTED: Helper function to build financial year filter with validation
+
 const buildFinancialYearFilter = (financialYear, month = null) => {
-  console.log("=== BUILD FINANCIAL YEAR FILTER ===")
-  console.log("Input Financial Year:", financialYear)
-  console.log("Input Month:", month)
+
   
   // Validate financialYear parameter
   if (!financialYear || financialYear === "all" || financialYear === "undefined") {
-    console.log("Financial year is missing, 'all', or 'undefined' - returning empty filter")
     return "";
   }
   
@@ -65,13 +62,11 @@ const buildFinancialYearFilter = (financialYear, month = null) => {
     return "";
   }
   
-  console.log("Parsed years - Start:", startYear, "End:", endYear)
-  console.log("Expected date range: April", startYear, "to March", endYear)
+
   
   // If specific month is selected
   if (month && month !== "all" && month !== "YTD") {
     const monthNum = Number(month);
-    console.log("Specific month selected:", monthNum)
     
     if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
       console.error("Invalid month number:", month)
@@ -83,16 +78,16 @@ const buildFinancialYearFilter = (financialYear, month = null) => {
     if (monthNum >= 4) {
       // April to December belongs to start year
       targetYear = startYear;
-      console.log("Month >= 4, using start year:", targetYear)
+
     } else {
       // January to March belongs to end year
       targetYear = endYear;
-      console.log("Month < 4, using end year:", targetYear)
+
     }
     
     // CORRECTED: Use proper month/year format matching your database
     const filter = `AND ipg.month_year = '${monthNum.toString().padStart(2, '0')}/${targetYear}'`;
-    console.log("Generated specific month filter:", filter)
+
     return filter;
   }
   
@@ -103,7 +98,7 @@ const buildFinancialYearFilter = (financialYear, month = null) => {
     (SUBSTRING_INDEX(ipg.month_year, '/', -1) = '${endYear}' AND SUBSTRING_INDEX(ipg.month_year, '/', 1) <= '03')
   )`;
   
-  console.log("Generated base time filter:", timeFilter)
+
   
   // Additional YTD constraint - only up to current month
   if (month === "YTD") {
@@ -111,7 +106,7 @@ const buildFinancialYearFilter = (financialYear, month = null) => {
     const currentMonth = currentDate.getMonth() + 1;
     const currentYear = currentDate.getFullYear();
     
-    console.log("YTD constraint - Current date:", { currentMonth, currentYear })
+
     
     // Convert current month to MM format for comparison
     const currentMonthStr = currentMonth.toString().padStart(2, '0');
@@ -131,10 +126,10 @@ const buildFinancialYearFilter = (financialYear, month = null) => {
       )`;
     }
     
-    console.log("Final YTD time filter:", timeFilter)
+    
   }
   
-  console.log("===================================")
+
   return timeFilter;
 };
 
@@ -152,14 +147,8 @@ const getInterimOrganizationMetrics = async (req, res) => {
     const month = req.params.month || req.query.month
     const financialYear = req.params.financialYear || req.query.financialYear
 
-    console.log("=== ORGANIZATION METRICS ===")
-    console.log("Raw request params:", req.params)
-    console.log("Raw request query:", req.query)
-    console.log("Extracted params:", { deliveryUnit, month, financialYear, role })
-
     // Validate required parameters
     if (!financialYear || financialYear === "undefined") {
-      console.error("Missing or invalid financial year parameter")
       return res.status(400).json({
         error: "Financial year parameter is required",
         details: "Please provide a valid financial year",
@@ -198,8 +187,6 @@ const getInterimOrganizationMetrics = async (req, res) => {
       ${whereClause}
     `
 
-    console.log("Executing query:", query)
-
     const results = await db.sequelize.query(query, { type: db.Sequelize.QueryTypes.SELECT })
 
     const response = results[0] || {
@@ -208,8 +195,6 @@ const getInterimOrganizationMetrics = async (req, res) => {
       total_gm: 0,
       gm_percentage: 0,
     }
-
-    console.log("Query response:", response)
     res.json(response)
   } catch (error) {
     console.error("Error in getInterimOrganizationMetrics:", error)
@@ -238,14 +223,9 @@ const getInterimProjectTrends = async (req, res) => {
     const month = req.params.month || req.query.month
     const financialYear = req.params.financialYear || req.query.financialYear
 
-    console.log("=== PROJECT TRENDS ===")
-    console.log("Raw request params:", req.params)
-    console.log("Raw request query:", req.query)
-    console.log("Extracted params:", { deliveryUnit, month, financialYear, role })
 
     // Validate required parameters
     if (!financialYear || financialYear === "undefined") {
-      console.error("Missing or invalid financial year parameter")
       return res.status(400).json({
         error: "Financial year parameter is required",
         details: "Please provide a valid financial year",
@@ -287,11 +267,8 @@ const getInterimProjectTrends = async (req, res) => {
       ORDER BY STR_TO_DATE(ipg.month_year, '%m/%Y') DESC
     `
 
-    console.log("Project trends query:", query)
-
     const results = await db.sequelize.query(query, { type: db.Sequelize.QueryTypes.SELECT })
     
-    console.log("Project trends results:", results)
     res.json(results)
   } catch (error) {
     console.error("Error in getInterimProjectTrends:", error)
@@ -317,10 +294,6 @@ const getProjectDetailsTable = async (req, res) => {
     const month = req.params.month || req.query.month
     const financialYear = req.params.financialYear || req.query.financialYear
 
-    console.log("=== PROJECT DETAILS TABLE ===")
-    console.log("Raw request params:", req.params)
-    console.log("Raw request query:", req.query)
-    console.log("Extracted params:", { deliveryUnit, month, financialYear, role })
 
     // Validate required parameters
     if (!financialYear || financialYear === "undefined") {
@@ -382,11 +355,9 @@ const getProjectDetailsTable = async (req, res) => {
       ORDER BY p.project_name ${(month !== "all" && month !== "YTD") ? ", STR_TO_DATE(ipg.month_year, '%m/%Y') DESC" : ""}
     `
 
-    console.log("Project details query:", query)
-
     const results = await db.sequelize.query(query, { type: db.Sequelize.QueryTypes.SELECT })
 
-    console.log("Project details results:", results)
+   
     res.json(results)
   } catch (error) {
     console.error("Error in getProjectDetailsTable:", error)
@@ -421,7 +392,7 @@ const getAvailableMonths = async (req, res) => {
       { type: db.Sequelize.QueryTypes.SELECT },
     )
 
-    console.log("Available months query results:", results)
+
 
     const monthYearList = results.map((r) => r.month_year)
 
@@ -449,7 +420,7 @@ const getAvailableMonths = async (req, res) => {
     // Get current financial year
     const currentFY = getCurrentFinancialYear()
 
-    console.log("Processed months and financial years:", { months, financialYears, currentFY })
+
 
     res.json({ 
       months, 

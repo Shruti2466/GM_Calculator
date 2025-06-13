@@ -7,15 +7,15 @@ const fs = require("fs")
 const path = require("path")
  
 exports.getAllProjects = async (req, res) => {
-  console.log("Getting all projects");
+
   const token = req.headers.authorization.split(" ")[1];
   const { role, email, role_id } = await extractEmailFromToken(token);
  
   try {
-    console.log(email, role);
+
     // Fetch role and employeeTableId using email
     const employee = await db.Employee.findOne({ where: { employee_email: email } });
-    console.log(employee, "employee data");
+    
     if (!employee) return res.status(404).send("Employee not found");
     const { id: employeeTableId } = employee;
  

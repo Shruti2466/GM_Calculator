@@ -16,12 +16,11 @@ exports.getOrganizationMetrics = async (req, res) => {
   const { deliveryUnit } = req.params
   const filter = deliveryUnit == "all" ? "" : `AND DU = '${deliveryUnit}'`
   logger.info(filter)
-  console.log(req.params)
+
   try {
-    console.log(email, role)
+ 
     // Fetch role and employeeTableId using email
     const employee = await db.Employee.findOne({ where: { employee_email: email } })
-    console.log(employee)
     if (!employee) return res.status(404).send("Employee not found")
     const { id: employeeTableId } = employee
 
@@ -81,7 +80,6 @@ exports.getDuList = async (req, res) => {
     const deliveryUnits = listDU[0][0].delivery.split(",")
     res.json(deliveryUnits)
   } catch (err) {
-    console.error("Error fetching delivery units:", err.message) // Log the error for debugging
     res.status(500).send("An error occurred while fetching delivery units.")
   }
 }

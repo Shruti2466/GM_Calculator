@@ -29,8 +29,7 @@ export function DashboardProjectGMChart({ deliveryUnit, financialYear, month }: 
       try {
         const token = getToken()
 
-        console.log("=== CHART COMPONENT ===")
-        console.log("Chart fetching data with:", { deliveryUnit, month, financialYear })
+
 
         // Validate financialYear before making request
         if (!financialYear || financialYear === "undefined" || financialYear === "") {
@@ -41,7 +40,7 @@ export function DashboardProjectGMChart({ deliveryUnit, financialYear, month }: 
 
         // INCLUDE FINANCIAL YEAR IN API CALL
         const apiUrl = `${process.env.NEXT_PUBLIC_API_BASE_URL}/interim-dashboard/project-trends?deliveryUnit=${deliveryUnit}&month=${encodeURIComponent(month)}&financialYear=${encodeURIComponent(financialYear)}`
-        console.log("Chart API URL:", apiUrl)
+
 
         const response = await fetch(apiUrl, {
           headers: {
@@ -56,12 +55,12 @@ export function DashboardProjectGMChart({ deliveryUnit, financialYear, month }: 
         }
 
         const trendsData = await response.json()
-        console.log("Chart data received:", trendsData)
+    
 
         if (Array.isArray(trendsData) && trendsData.length > 0) {
           setData(trendsData)
         } else {
-          console.log("No trend data available")
+          
           setData([])
         }
       } catch (err) {
@@ -76,7 +75,7 @@ export function DashboardProjectGMChart({ deliveryUnit, financialYear, month }: 
     if (deliveryUnit && financialYear && month) {
       fetchProjectTrends()
     } else {
-      console.log("Missing required props for chart:", { deliveryUnit, month, financialYear })
+
       setIsLoading(false)
     }
   }, [deliveryUnit, month, financialYear]) // ADD financialYear TO DEPENDENCIES

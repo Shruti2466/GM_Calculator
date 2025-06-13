@@ -71,16 +71,7 @@ exports.calculateMetrics = async (financeSheetPath, rmSheetPath, salarySheetPath
       combinedData.push(combinedRow)
     }
   })
-  console.log(combinedData)
-  // Log statistics about the data combination
-  console.log("\nData Combination Statistics:")
-  console.log("---------------------------")
-  console.log("Total finance records:", financeData.length)
-  console.log("Total RM records:", rmData.length)
-  console.log("Total salary records:", salaryData.length)
-  console.log("Successfully matched records:", combinedData.length)
-  console.log("Rejected/unmatched records:", financeData.length - combinedData.length)
-  console.log("---------------------------\n")
+
 
   // Fetch the DU from the projects table
   const project = await db.Project.findOne({ where: { id: projectId } })
@@ -110,7 +101,7 @@ exports.calculateMetrics = async (financeSheetPath, rmSheetPath, salarySheetPath
 
     if (existingRecord) {
       // Update the existing record
-      console.log("Update the existing record")
+  
       await db.Employee_Project_Calculations.update(
         {
           total_direct_cost: totalDirectCost,
@@ -131,7 +122,7 @@ exports.calculateMetrics = async (financeSheetPath, rmSheetPath, salarySheetPath
       )
     } else {
       // Insert a new record
-      console.log("Insert a new record")
+
       await db.Employee_Project_Calculations.create({
         employee_id: row["Employee ID"],
         employee_name: row["Employee Name"],

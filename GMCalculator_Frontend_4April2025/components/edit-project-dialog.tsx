@@ -63,7 +63,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onSave, onProje
 
   const formatDateForInput = (isoDate: string) => {
     if (!isoDate) return ""
-    console.log("isoDate", isoDate)
+    
     const [day, month, year] = isoDate.split("T")[0].split("-").map(Number)
 
     const formattedDate = new Date(year, month - 1, day)
@@ -72,7 +72,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onSave, onProje
     // Months are 0-based
     const yyyy = formattedDate.getFullYear()
     const finalDate = `${yyyy}-${mm}-${dd}`
-    console.log("date is ", finalDate)
+  
     return finalDate // Extract YYYY-MM-DD from YYYY-MM-DDTHH:MM:SSZ
   }
 
