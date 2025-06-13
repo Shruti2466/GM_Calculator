@@ -112,7 +112,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onSave, onProje
         setDeliveryManagers(dmData)
         setDeliveryHeads(dhData)
       } catch (error) {
-        console.error("Error fetching employee data:", error)
+        
         toast({
           title: "Error",
           description: "Failed to load employee data. Please try again.",
@@ -154,7 +154,7 @@ export function EditProjectDialog({ project, open, onOpenChange, onSave, onProje
         description: "The project has been successfully updated.",
       })
     } catch (error) {
-      console.error("Error updating project:", error)
+     
       toast({
         title: "Error",
         description: "Failed to update the project. Please try again.",

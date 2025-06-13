@@ -70,7 +70,7 @@ export default function AuditTrailPage() {
       setAuditData(data)
     } catch (err) {
       setError("Failed to load audit data. Please try again later.")
-      console.error("Error fetching audit data:", err)
+      
     } finally {
       setIsLoading(false)
       setIsRefreshing(false)

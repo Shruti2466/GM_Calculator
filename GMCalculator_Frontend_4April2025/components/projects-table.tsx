@@ -120,7 +120,7 @@ export const ProjectsTable = forwardRef((_, ref) => {
         })
         setEmployeeMap(map)
       } catch (error) {
-        console.error("Error fetching employees:", error)
+        
       }
     }
 
@@ -476,7 +476,7 @@ export const ProjectsTable = forwardRef((_, ref) => {
       })
       fetchProjects() // Refresh the projects list
     } catch (error) {
-      console.error("Error updating project:", error)
+      
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to update the project. Please try again.",
@@ -508,7 +508,7 @@ export const ProjectsTable = forwardRef((_, ref) => {
         setDeletingProject(null)
         router.refresh() // Refresh the page to update any server-side rendered content
       } catch (error) {
-        console.error("Error deleting project:", error)
+        
         toast({
           title: "Error",
           description: "Failed to delete the project. Please try again.",
@@ -561,7 +561,7 @@ export const ProjectsTable = forwardRef((_, ref) => {
         setSelectedFile3(null)
         fetchProjects() // Refresh the projects list
       } catch (error) {
-        console.error("Error uploading GM calculation:", error)
+        
         toast({
           title: "Error",
           description: "Failed to upload and process the GM calculation. Please try again.",

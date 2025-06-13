@@ -42,13 +42,13 @@ const buildFinancialYearFilter = (financialYear, month = null) => {
   
   // Validate financialYear format (should be like "2025-26")
   if (typeof financialYear !== 'string' || !financialYear.includes('-')) {
-    console.error("Invalid financial year format:", financialYear)
+    
     return "";
   }
   
   const yearParts = financialYear.split('-');
   if (yearParts.length !== 2) {
-    console.error("Invalid financial year format - should be 'YYYY-YY':", financialYear)
+    
     return "";
   }
   
@@ -58,7 +58,7 @@ const buildFinancialYearFilter = (financialYear, month = null) => {
   
   // Validate parsed years
   if (isNaN(startYear) || isNaN(endYear)) {
-    console.error("Invalid year values after parsing:", { startYear, endYear })
+    
     return "";
   }
   
@@ -69,7 +69,7 @@ const buildFinancialYearFilter = (financialYear, month = null) => {
     const monthNum = Number(month);
     
     if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
-      console.error("Invalid month number:", month)
+      
       return "";
     }
     
@@ -197,7 +197,7 @@ const getInterimOrganizationMetrics = async (req, res) => {
     }
     res.json(response)
   } catch (error) {
-    console.error("Error in getInterimOrganizationMetrics:", error)
+   
     res.status(500).json({
       error: "Internal server error",
       details: error.message,
@@ -271,7 +271,7 @@ const getInterimProjectTrends = async (req, res) => {
     
     res.json(results)
   } catch (error) {
-    console.error("Error in getInterimProjectTrends:", error)
+    
     res.status(500).json({
       error: "Internal server error",
       details: error.message,
@@ -297,7 +297,6 @@ const getProjectDetailsTable = async (req, res) => {
 
     // Validate required parameters
     if (!financialYear || financialYear === "undefined") {
-      console.error("Missing or invalid financial year parameter")
       return res.status(400).json({
         error: "Financial year parameter is required",
         details: "Please provide a valid financial year",
@@ -360,7 +359,7 @@ const getProjectDetailsTable = async (req, res) => {
    
     res.json(results)
   } catch (error) {
-    console.error("Error in getProjectDetailsTable:", error)
+    
     res.status(500).json({
       error: "Internal server error",
       details: error.message,
@@ -428,7 +427,7 @@ const getAvailableMonths = async (req, res) => {
       currentFinancialYear: currentFY // Send current FY to frontend
     })
   } catch (error) {
-    console.error("Error in getAvailableMonths:", error)
+    
     res.status(500).json({
       error: "Internal server error",
       details: error.message,
@@ -461,7 +460,7 @@ const getMonthlyAggregatedData = async (req, res) => {
     const results = await db.sequelize.query(query, { type: db.Sequelize.QueryTypes.SELECT }) 
     res.json(results)
   } catch (error) {
-    console.error("Error in getMonthlyAggregatedData:", error)
+    
     res.status(500).json({
       error: "Internal server error",
       details: error.message,

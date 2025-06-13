@@ -58,7 +58,7 @@ export default function LoginPage() {
         const data = await response.json()
         setRoles(data)
       } catch (error) {
-        console.error("Error fetching roles:", error)
+        
         toast({
           title: "Error",
           description: "Failed to load roles. Please try again later.",
@@ -120,7 +120,7 @@ export default function LoginPage() {
         }
       }
     } catch (error) {
-      console.error("Login error", error)
+      
       toast({
         title: "Login Error",
         description: "An error occurred during login. Please try again.",
@@ -187,7 +187,7 @@ export default function LoginPage() {
         })
       }
     } catch (error) {
-      console.error("Registration error", error)
+      
       Swal.fire({
         icon: "error",
         title: "Error",

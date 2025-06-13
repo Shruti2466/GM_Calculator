@@ -91,7 +91,7 @@ export function AddProjectForm({ onSuccess, onProjectAdded }: AddProjectFormProp
         setDeliveryManagers(dmData)
         setDeliveryHeads(dhData)
       } catch (error) {
-        console.error("Error fetching employee data:", error)
+        
         toast({
           title: "Error",
           description: "Failed to load employee data. Please try again.",
@@ -128,7 +128,7 @@ export function AddProjectForm({ onSuccess, onProjectAdded }: AddProjectFormProp
       onProjectAdded() // Call this to refresh the project table
       form.reset()
     } catch (error) {
-      console.error("Error adding project:", error)
+      
       toast({
         title: "Error",
         description: "There was a problem adding the project. Please try again.",

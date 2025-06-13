@@ -37,10 +37,10 @@ const filterDataByMonths = (data: ChartData[], months: number) => {
   const now = new Date()
   const startDate = new Date()
   startDate.setMonth(now.getMonth() - months) // Covers 'months' including the current one
-  console.log(startDate)
+  
   return data.filter((item) => {
     const itemDate = parseDate(item.name)
-    console.log(itemDate, "datafliter")
+   
     return itemDate >= startDate && itemDate <= now
   })
 }

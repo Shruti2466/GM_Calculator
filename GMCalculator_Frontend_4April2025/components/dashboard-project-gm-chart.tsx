@@ -33,7 +33,7 @@ export function DashboardProjectGMChart({ deliveryUnit, financialYear, month }: 
 
         // Validate financialYear before making request
         if (!financialYear || financialYear === "undefined" || financialYear === "") {
-          console.error("Missing or invalid financial year in chart component")
+          
           setError("Financial year is required")
           return
         }
@@ -50,7 +50,7 @@ export function DashboardProjectGMChart({ deliveryUnit, financialYear, month }: 
 
         if (!response.ok) {
           const errorText = await response.text()
-          console.error("Chart API error:", errorText)
+          
           throw new Error(`HTTP error! status: ${response.status}`)
         }
 
@@ -64,7 +64,7 @@ export function DashboardProjectGMChart({ deliveryUnit, financialYear, month }: 
           setData([])
         }
       } catch (err) {
-        console.error("Error fetching project trends:", err)
+        
         setError(err instanceof Error ? err.message : "Failed to load chart data")
       } finally {
         setIsLoading(false)
