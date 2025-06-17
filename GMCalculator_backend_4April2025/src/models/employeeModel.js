@@ -2,14 +2,10 @@ module.exports = (sequelize, DataTypes) => {
   const Employee = sequelize.define(
     "Employee",
     {
-      employee_id: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true,
-      },
       employee_email: {
         type: DataTypes.STRING,
         allowNull: false,
+        unique: true,
         validate: {
           isEmail: true,
         },
@@ -21,6 +17,12 @@ module.exports = (sequelize, DataTypes) => {
       role_id: {
         type: DataTypes.INTEGER,
         allowNull: false,
+        references: {
+          model: "roles",
+          key: "id",
+        },
+        onUpdate: "CASCADE",
+        onDelete: "RESTRICT",
       },
       created_at: {
         type: DataTypes.DATE,
@@ -38,6 +40,10 @@ module.exports = (sequelize, DataTypes) => {
       timestamps: false,
     },
   )
+
+  Employee.associate = (models) => {
+    Employee.belongsTo(models.Role, { foreignKey: "role_id" })
+  }
 
   return Employee
 }

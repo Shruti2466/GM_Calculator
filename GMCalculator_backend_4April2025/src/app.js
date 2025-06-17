@@ -12,12 +12,13 @@ const roleRoutes = require("./routes/roleRoutes")
 const logger = require("./logger")
 const monthlyUploadRoutes = require("./routes/monthlyUploadRoutes")
 const interimDashboardRoutes = require("./routes/interimDashboardRoutes")
+const userRoutes = require("./routes/userRoutes")
 
 const app = express()
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: process.env.FRONTEND_URL || "http://localhost:4000",
     credentials: true,
   }),
 )
@@ -34,6 +35,7 @@ app.use("/uploads", express.static("uploads"))
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 app.use("/api/upload/monthly-data", monthlyUploadRoutes)
 app.use("/api/interim-dashboard", interimDashboardRoutes)
+app.use("/api/users", userRoutes)
 
 app.use((err, req, res, next) => {
   logger.error(err.stack)

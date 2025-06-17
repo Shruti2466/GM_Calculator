@@ -40,11 +40,11 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
       const email = getEmail()
       const name = localStorage.getItem("employeeName") || ""
 
-      if (token && pathname !== "/login") {
+      if (token && pathname !== "/login" && pathname !== "/unauthorized") {
         setIsAuthenticated(true)
         if (role) setUserRole(role)
         if (name) setUserName(name)
-      } else if (pathname !== "/login") {
+      } else if (pathname !== "/login" && pathname !== "/unauthorized") {
         router.push("/login")
       }
       setIsLoading(false)
@@ -52,6 +52,16 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
 
     checkAuth()
   }, [pathname, router])
+
+  // Show loading state
+  if (isLoading) {
+    return <div>Loading...</div>
+  }
+
+  // Allow unauthorized page to render without authentication
+  if (pathname === "/unauthorized") {
+    return <>{children}</>
+  }
 
   const handleLogout = () => {
     removeAuth()
