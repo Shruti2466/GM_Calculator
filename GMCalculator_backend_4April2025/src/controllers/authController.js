@@ -4,6 +4,7 @@ const logger = require("../logger")
 
 exports.login = async (req, res) => {
   const { email } = req.body
+  console.log(email)
 
   if (!email) {
     return res.status(400).json({ message: "Email is required" })
@@ -44,6 +45,8 @@ exports.login = async (req, res) => {
       userId: user.id,
       role_id: user.role_id,
     })
+
+    console.log(token);
   } catch (err) {
     logger.error(`Login error: ${err.message}`)
     res.status(500).json({ message: "Internal server error" })

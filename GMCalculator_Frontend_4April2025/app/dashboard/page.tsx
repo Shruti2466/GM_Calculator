@@ -27,10 +27,14 @@ interface AvailableMonthsResponse {
 export default function DashboardPage() {
   useEffect(() => {
     const token = getToken()
+    console.log(token)
     if (!token) {
       redirect("/login")
     }
   }, [])
+
+  
+
 
   const [selectedDeliveryUnit, setSelectedDeliveryUnit] = useState<string>("all")
   const [selectedMonth, setSelectedMonth] = useState<string>("YTD")
@@ -131,7 +135,7 @@ export default function DashboardPage() {
       setAvailableFinancialYears(data.financialYears || [])
       setCurrentFinancialYear(data.currentFinancialYear || getCurrentFinancialYear())
 
-      const currentFY = data.currentFinancialYear || getCurrentFinancialYear()
+      const currentFY = data.currentzFinancialYear || getCurrentFinancialYear()
       if (data.financialYears && data.financialYears.includes(currentFY)) {
         setSelectedFinancialYear(currentFY)
         setSelectedMonth("YTD")

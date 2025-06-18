@@ -34,7 +34,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
   const pathname = usePathname()
 
   useEffect(() => {
-    const checkAuth = () => {
+    const checkAuth = async () => {
       const token = getToken()
       const role = getRole()
       const email = getEmail()
@@ -45,7 +45,48 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
         if (role) setUserRole(role)
         if (name) setUserName(name)
       } else if (pathname !== "/login" && pathname !== "/unauthorized") {
-        router.push("/login")
+        // Check if user came from portal with LDAP email
+        const ldapEmail = localStorage.getItem('ldapEmail') || localStorage.getItem('userEmail')
+        
+        if (ldapEmail && !token) {
+          // Attempt automatic login with LDAP email
+          try {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}/auth/login`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ email: ldapEmail.trim() }),
+            })
+
+            const data = await response.json()
+
+            if (response.ok) {
+              // Store authentication data
+              localStorage.setItem('authData', JSON.stringify({
+                token: data.token,
+                email: data.email,
+                role: data.role,
+                role_id: data.role_id,
+                employeeName: data.userName,
+                userId: data.userId,
+              }))
+
+              setIsAuthenticated(true)
+              setUserRole(data.role)
+              setUserName(data.userName)
+              
+              // Don't redirect, let them stay on current page
+            } else {
+              router.push("/login")
+            }
+          } catch (error) {
+            console.error('Auto-login failed:', error)
+            router.push("/login")
+          }
+        } else {
+          router.push("/login")
+        }
       }
       setIsLoading(false)
     }
