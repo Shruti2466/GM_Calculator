@@ -70,9 +70,9 @@ export default function UploadMonthlyDataPage() {
     sheet1: null,
     sheet2: null,
     sheet3: null,
-    sheet4: null,
-    sheet5: null,
-    sheet6: null,
+    // sheet4: null,
+    // sheet5: null,
+    // sheet6: null,
   })
 
   const [currentPage, setCurrentPage] = useState(1)
@@ -107,18 +107,18 @@ export default function UploadMonthlyDataPage() {
     sheet1: "Delivery Investment Report",
     sheet2: "Salary Sheet",
     sheet3: "Revenue",
-    sheet4: "Project Metrics",
-    sheet5: "Client Feedback",
-    sheet6: "Team Utilization",
+    // sheet4: "Project Metrics",
+    // sheet5: "Client Feedback",
+    // sheet6: "Team Utilization",
   }
 
   const sheetMappings = {
     sheet1: { id: 1, name: "Delivery Investment Report" },
     sheet2: { id: 2, name: "Salary Sheet" },
     sheet3: { id: 3, name: "Revenue" },
-    sheet4: { id: 4, name: "Project Metrics" },
-    sheet5: { id: 5, name: "Client Feedback" },
-    sheet6: { id: 6, name: "Team Utilization" },
+    // sheet4: { id: 4, name: "Project Metrics" },
+    // sheet5: { id: 5, name: "Client Feedback" },
+    // sheet6: { id: 6, name: "Team Utilization" },
   }
 
   const getPreviousMonthName = () => {
