@@ -29,7 +29,7 @@ export function SidebarNav() {
 
   const handleLogout = () => {
     removeAuth()
-    router.push("/login")
+    router.push("https://vistaops.harbingergroup.com/login")
   }
 
   const toggleSidebar = () => {
@@ -48,17 +48,17 @@ export function SidebarNav() {
   const navItems = [
     {
       title: "Dashboard",
-      href: "/dashboard",
+      href: "/app1/dashboard",
       icon: LayoutDashboard,
     },
     {
       title: "Projects",
-      href: "/projects",
+      href: "/app1/projects",
       icon: FolderKanban,
     },
     {
       title: "Upload Monthly Data",
-      href: "/upload-monthly-data",
+      href: "/app1/upload-monthly-data",
       icon: FileUp,
     },
   ]
@@ -67,7 +67,7 @@ export function SidebarNav() {
   if (userRole === "Admin") {
     navItems.push({
       title: "Audit Trail",
-      href: "/audit-trail",
+      href: "/app1/audit-trail",
       icon: FileText,
     })
   }

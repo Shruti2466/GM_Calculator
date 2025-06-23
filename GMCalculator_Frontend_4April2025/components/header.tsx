@@ -27,7 +27,7 @@ export function Header({ onMenuClick, showMenu, employeeName, employeeRole, isLo
 
   const handleLogout = () => {
     removeAuth()
-    router.push("/login")
+    router.push("https://vistaops.harbingergroup.com/login")
   }
 
   const getInitials = (name: string) => {

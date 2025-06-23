@@ -1,6 +1,6 @@
 module.exports = (sequelize, DataTypes) => {
-    const Monthly_uploaded_sheets = sequelize.define(
-      "Monthly_uploaded_sheets",
+    const monthly_uploaded_sheets = sequelize.define(
+      "monthly_uploaded_sheets",
       {
         sheet_id: { type: DataTypes.STRING(50), allowNull: false },
         version: { type: DataTypes.INTEGER, allowNull: false },
@@ -18,17 +18,17 @@ module.exports = (sequelize, DataTypes) => {
       }
     );
    
-    Monthly_uploaded_sheets.associate = (models) => {
-      Monthly_uploaded_sheets.belongsTo(models.User, {
+    monthly_uploaded_sheets.associate = (models) => {
+      monthly_uploaded_sheets.belongsTo(models.User, {
         foreignKey: "uploaded_by",
         as: "uploader",
       });
-      Monthly_uploaded_sheets.belongsTo(models.Monthly_sheet, {
+      monthly_uploaded_sheets.belongsTo(models.monthly_sheet, {
         foreignKey: "sheet_id",
         targetKey: "id",
       });
     };
    
-    return Monthly_uploaded_sheets;
+    return monthly_uploaded_sheets;
   };
    

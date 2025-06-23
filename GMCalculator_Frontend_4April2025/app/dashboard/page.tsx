@@ -135,7 +135,7 @@ export default function DashboardPage() {
       setAvailableFinancialYears(data.financialYears || [])
       setCurrentFinancialYear(data.currentFinancialYear || getCurrentFinancialYear())
 
-      const currentFY = data.currentzFinancialYear || getCurrentFinancialYear()
+      const currentFY = data.currentFinancialYear || getCurrentFinancialYear()
       if (data.financialYears && data.financialYears.includes(currentFY)) {
         setSelectedFinancialYear(currentFY)
         setSelectedMonth("YTD")

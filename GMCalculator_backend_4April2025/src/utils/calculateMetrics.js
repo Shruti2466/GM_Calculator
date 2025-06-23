@@ -2,21 +2,21 @@ const xlsx = require("xlsx")
 const db = require("../models")
 const logger = require("../logger")
 
-exports.calculateMetrics = async (financeSheetPath, rmSheetPath, salarySheetPath, projectId) => {
+exports.calculateMetrics = async (financeSheetPath, rmSheetPath, salarysheetPath, projectId) => {
   // Read all three workbooks
   const financeWorkbook = xlsx.readFile(financeSheetPath)
   const rmWorkbook = xlsx.readFile(rmSheetPath)
-  const salaryWorkbook = xlsx.readFile(salarySheetPath)
+  const salaryWorkbook = xlsx.readFile(salarysheetPath)
 
   // Get the first sheet from each workbook
   const financeSheet = financeWorkbook.Sheets[financeWorkbook.SheetNames[0]]
   const rmSheet = rmWorkbook.Sheets[rmWorkbook.SheetNames[0]]
-  const salarySheet = salaryWorkbook.Sheets[salaryWorkbook.SheetNames[0]]
+  const salarysheet = salaryWorkbook.Sheets[salaryWorkbook.SheetNames[0]]
 
   // Convert sheets to JSON
   const financeData = xlsx.utils.sheet_to_json(financeSheet)
   const rmData = xlsx.utils.sheet_to_json(rmSheet)
-  const salaryData = xlsx.utils.sheet_to_json(salarySheet)
+  const salaryData = xlsx.utils.sheet_to_json(salarysheet)
 
   // Create maps for each dataset for efficient lookup
   const financeMap = new Map()
@@ -90,7 +90,7 @@ exports.calculateMetrics = async (financeSheetPath, rmSheetPath, salarySheetPath
     const revenue = row["Revenue"] * technicalInvolvement
 
     // Find if the record exists
-    const existingRecord = await db.Employee_Project_Calculations.findOne({
+    const existingRecord = await db.employee_project_calculations.findOne({
       where: {
         employee_id: row["Employee ID"],
         project_id: projectId,
@@ -102,7 +102,7 @@ exports.calculateMetrics = async (financeSheetPath, rmSheetPath, salarySheetPath
     if (existingRecord) {
       // Update the existing record
   
-      await db.Employee_Project_Calculations.update(
+      await db.employee_project_calculations.update(
         {
           total_direct_cost: totalDirectCost,
           gross_margin: grossMargin,
@@ -123,7 +123,7 @@ exports.calculateMetrics = async (financeSheetPath, rmSheetPath, salarySheetPath
     } else {
       // Insert a new record
 
-      await db.Employee_Project_Calculations.create({
+      await db.employee_project_calculations.create({
         employee_id: row["Employee ID"],
         employee_name: row["Employee Name"],
         project_id: projectId,

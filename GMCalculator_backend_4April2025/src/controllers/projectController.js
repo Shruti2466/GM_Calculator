@@ -108,7 +108,7 @@ exports.getAllProjects = async (req, res) => {
  
 exports.createProject = async (req, res) => {
   const {
-    project_code,
+    project_id,
     engagement_type,
     staffingmodel,
     service_type,
@@ -126,7 +126,7 @@ exports.createProject = async (req, res) => {
     const formattedEndDate = moment(end_date, "YYYY-MM-DD").format("YYYY-MM-DD");
  
     const project = await db.Project.create({
-      project_code,
+      project_code: project_id,
       engagement_type,
       staffingmodel,
       service_type,
@@ -287,7 +287,7 @@ exports.uploadFileAndCalculate = async (req, res) => {
 exports.getProjectChartData = async (req, res) => {
   const projectId = req.params.id
   try {
-    const data = await db.Employee_Project_Calculations.findAll({
+    const data = await db.employee_project_calculations.findAll({
       where: { project_code: projectId },
       attributes: [
         [db.Sequelize.fn("CONCAT", db.Sequelize.col("month"), "/", db.Sequelize.col("year")), "name"],

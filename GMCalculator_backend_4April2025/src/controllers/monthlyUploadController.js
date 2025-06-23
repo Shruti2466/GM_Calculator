@@ -112,7 +112,7 @@ exports.trackMonthlyUpload = async (req, res) => {
       return res.status(400).json({ error: "Missing required fields" })
     }
 
-    const [sheet] = await db.sequelize.query(`SELECT id FROM Monthly_sheet WHERE sheet_name = ? LIMIT 1`, {
+    const [sheet] = await db.sequelize.query(`SELECT id FROM monthly_sheet WHERE sheet_name = ? LIMIT 1`, {
       replacements: [sheet_name],
       type: db.Sequelize.QueryTypes.SELECT,
     })
@@ -123,16 +123,16 @@ exports.trackMonthlyUpload = async (req, res) => {
 
     const sheet_id = sheet.id
 
-    const latestVersion = await db.Monthly_uploaded_sheets.findOne({
+    const latestVersion = await db.monthly_uploaded_sheets.findOne({
       where: { sheet_id },
       order: [["version", "DESC"]],
     })
 
     const newVersion = latestVersion ? latestVersion.version + 1 : 1
 
-    await db.Monthly_uploaded_sheets.update({ is_current: false }, { where: { sheet_id } })
+    await db.monthly_uploaded_sheets.update({ is_current: false }, { where: { sheet_id } })
 
-    const newUpload = await db.Monthly_uploaded_sheets.create({
+    const newUpload = await db.monthly_uploaded_sheets.create({
       sheet_id,
       version: newVersion,
       file_name,
@@ -376,7 +376,7 @@ async function processDeliveryInvestmentReport(data) {
   }
 }
 
-exports.processSalarySheet = async (req, res) => {
+exports.processsalarysheet = async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "Please upload an Excel file" })
   }
@@ -403,7 +403,7 @@ exports.processSalarySheet = async (req, res) => {
       const year = now.getFullYear()
 
       const existingRows = await db.sequelize.query(
-        `SELECT created_at FROM salarySheet 
+        `SELECT created_at FROM salarysheet 
          WHERE MONTH(created_at) = ? AND YEAR(created_at) = ? LIMIT 1`,
         {
           replacements: [month, year],
@@ -417,7 +417,7 @@ exports.processSalarySheet = async (req, res) => {
       if (existingRows.length > 0) {
         createdAtToReuse = existingRows[0].created_at
         await db.sequelize.query(
-          `DELETE FROM salarySheet 
+          `DELETE FROM salarysheet 
            WHERE MONTH(created_at) = ? AND YEAR(created_at) = ?`,
           { replacements: [month, year], transaction },
         )
@@ -458,7 +458,7 @@ exports.processSalarySheet = async (req, res) => {
           }
 
           await db.sequelize.query(
-            `INSERT INTO salarySheet 
+            `INSERT INTO salarysheet 
             (EmployeeCode, EmployeeName, DateOfJoining, CurrentDesignation, Grade, CurrentDepartment, CTC, AdditionalCostEmployee, created_at, updated_at) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
             {
@@ -641,7 +641,7 @@ exports.calculateInterimCost = async (req, res) => {
         COALESCE((SELECT SUM(cost) FROM additionalcosts), 0.00) AS AdditionalCost,
         :monthYear AS month_year
       FROM delivery_investment_report d
-      JOIN salarySheet s ON d.employee_id = s.EmployeeCode
+      JOIN salarysheet s ON d.employee_id = s.EmployeeCode
       JOIN (SELECT rate FROM usexchangerate ORDER BY updatedat DESC LIMIT 1) exchange_rate
       WHERE MONTH(d.created_at) = :currentMonth AND YEAR(d.created_at) = :currentYear`,
       {

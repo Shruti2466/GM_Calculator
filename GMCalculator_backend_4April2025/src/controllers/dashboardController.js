@@ -53,7 +53,7 @@ exports.getOrganizationMetrics = async (req, res) => {
         SUM(total_direct_cost) AS totalDirectCost,
         SUM(gross_margin) AS totalGrossMargin,
         AVG(percentage_gross_margin) AS avgGrossMarginPercentage
-      FROM Employee_Project_Calculations
+      FROM employee_project_calculations
       WHERE project_id IN (${projectIds.map(() => "?").join(",")})
       AND CONCAT(year, '-', LPAD(month, 2, '0'), '-01') >= DATE_FORMAT(DATE_SUB(CURDATE(), INTERVAL 6 MONTH), '%Y-%m-01')
       ${filter}`,

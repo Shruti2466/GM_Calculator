@@ -7,6 +7,11 @@ try {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // basePath: '/app1',
+  //trailingSlash: true, // optional, helps if using static export
+  basePath: '/app1',
+  assetPrefix: '/app1/', // optional but recommended for static assets
+ 
   eslint: {
     ignoreDuringBuilds: true,
   },

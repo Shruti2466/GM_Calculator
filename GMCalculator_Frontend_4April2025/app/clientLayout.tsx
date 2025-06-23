@@ -39,7 +39,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
       const role = getRole()
       const email = getEmail()
       const name = localStorage.getItem("employeeName") || ""
-
+        
       if (token && pathname !== "/login" && pathname !== "/unauthorized") {
         setIsAuthenticated(true)
         if (role) setUserRole(role)
@@ -58,7 +58,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
               },
               body: JSON.stringify({ email: ldapEmail.trim() }),
             })
-
+            
             const data = await response.json()
 
             if (response.ok) {
@@ -106,7 +106,7 @@ export default function ClientLayout({ children }: ClientLayoutProps) {
 
   const handleLogout = () => {
     removeAuth()
-    router.push("/login")
+    router.push("https://vistaops.harbingergroup.com/login")
   }
 
   const getInitials = (name: string) => {

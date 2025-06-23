@@ -1,5 +1,5 @@
 module.exports = (sequelize, DataTypes) => {
-    const MonthlySheet = sequelize.define("Monthly_sheet", {
+    const MonthlySheet = sequelize.define("monthly_sheet", {
         id: {
             type: DataTypes.INTEGER,
             allowNull: false,

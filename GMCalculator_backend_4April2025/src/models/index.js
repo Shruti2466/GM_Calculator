@@ -14,14 +14,14 @@ db.Role = require("./roleModel")(sequelize, Sequelize)
 db.Project = require("./projectModel")(sequelize, Sequelize)
 db.Upload = require("./uploadModel.js")(sequelize, Sequelize)
 db.Employee = require("./employeeModel.js")(sequelize, Sequelize)
-db.Employee_Project_Calculations = require("./Employee_Project_Calculations.js")(sequelize, Sequelize)
+db.employee_project_calculations = require("./employee_project_calculations.js")(sequelize, Sequelize)
 db.Project_Metrics = require("./projectMetricsModel.js")(sequelize, Sequelize)
-db.DeliveryInvestmentReport = require("./deliveryinvestmentreportmodel.js")(sequelize, Sequelize)
-db.Monthly_uploaded_sheets = require("./Monthly_uploaded_sheets.js")(sequelize, Sequelize)
-db.Monthly_sheet = require("./Monthly_sheet.js")(sequelize, Sequelize)
+db.DeliveryInvestmentReport = require("./deliveryInvestmentReportModel.js")(sequelize, Sequelize)
+db.monthly_uploaded_sheets = require("./monthly_uploaded_sheets.js")(sequelize, Sequelize)
+db.monthly_sheet = require("./monthly_sheet.js")(sequelize, Sequelize)
 db.AdditionalCost = require("./additionalCostsModel")(sequelize, Sequelize);
 db.InterimProjectGM = require("./interimProjectGmModel.js")(sequelize, Sequelize)
-db.InterimCostCalculationModel = require("./interimCostCalculationModel.js")(sequelize, Sequelize)
+db.InterimCostCalculationModel = require("./InterimCostCalculationModel.js")(sequelize, Sequelize)
 
 // Set up associations
 Object.keys(db).forEach((modelName) => {
